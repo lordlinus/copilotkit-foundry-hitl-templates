@@ -1,0 +1,22 @@
+# Node / Next
+node_modules/
+**/.next/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.pyc
+**/.venv/
+
+# Env / secrets
+.env
+**/.env
+**/.env.local
+backend/.env
+
+# azd
+**/.azure/
+
+# Scratch
+.scratchpad/
+.cache/

@@ -1,0 +1,25 @@
+{
+  "templateId": "agentic-copilot-foundry",
+  "displayName": "Agentic CopilotKit + Foundry (HITL)",
+  "description": "A Next.js/CopilotKit chat UI over a FastAPI/AG-UI SSE backend hosting one Microsoft Agent Framework agent, connected keyless to Azure AI Foundry, with native human-in-the-loop approval on consequential tools. Also publishable as a Foundry hosted agent (Responses) via azd.",
+  "icon": "robot",
+  "stack": [
+    "Next.js",
+    "CopilotKit",
+    "AG-UI",
+    "Microsoft Agent Framework",
+    "Azure AI Foundry"
+  ],
+  "services": {
+    "frontend": true,
+    "agUiBackend": true,
+    "hostedAgent": true,
+    "hitl": true
+  },
+  "connection": "keyless (DefaultAzureCredential)",
+  "offlineSmoke": true,
+  "tokens": [
+    "FOUNDRY_PROJECT_ENDPOINT",
+    "AZURE_AI_MODEL_DEPLOYMENT_NAME"
+  ]
+}

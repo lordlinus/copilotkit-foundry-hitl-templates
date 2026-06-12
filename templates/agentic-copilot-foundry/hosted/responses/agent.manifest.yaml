@@ -1,0 +1,25 @@
+name: forgewright-app
+description: >
+  A domain-agnostic Microsoft Agent Framework starter agent with native
+  human-in-the-loop approval: read tools run freely, while any tool decorated
+  approval_mode="always_require" pauses for explicit human Approve/Reject before
+  its body executes. Replace the demo tools with your domain logic.
+metadata:
+  tags:
+    - Agent Framework
+    - AI Agent Hosting
+    - Responses Protocol
+    - Human-in-the-loop
+template:
+  name: forgewright-app
+  kind: hosted
+  protocols:
+    - protocol: responses
+      version: 1.0.0
+  environment_variables:
+    - name: AZURE_AI_MODEL_DEPLOYMENT_NAME
+      value: "{{AZURE_AI_MODEL_DEPLOYMENT_NAME}}"
+resources:
+  - kind: model
+    id: gpt-4.1
+    name: AZURE_AI_MODEL_DEPLOYMENT_NAME

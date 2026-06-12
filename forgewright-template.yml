@@ -1,0 +1,9 @@
+apiVersion: v1
+metadata:
+  name: forgewright
+  displayName: forgewright Templates
+  description: One-prompt CopilotKit + AG-UI + Foundry hosted-agent apps with HITL
+entries:
+  - path: templates/agentic-copilot-foundry
+    name: Agentic CopilotKit + Foundry (HITL)
+    description: A Next.js/CopilotKit chat UI over a FastAPI/AG-UI SSE backend hosting one Microsoft Agent Framework agent, connected keyless to Azure AI Foundry, with native human-in-the-loop approval on consequential tools. Also publishable as a Foundry hosted agent (Responses) via azd.
