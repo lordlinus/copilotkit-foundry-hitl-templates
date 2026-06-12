@@ -71,6 +71,7 @@ shipped — see `.agents/skills/forgewright/SKILL.md`.
 | Template | Description | Stack |
 | --- | --- | --- |
 | **[Agentic CopilotKit + Foundry (HITL)](templates/agentic-copilot-foundry)** | A Next.js/CopilotKit chat UI over a FastAPI/AG-UI SSE backend hosting one Microsoft Agent Framework agent, connected keyless to Azure AI Foundry, with native human-in-the-loop approval on consequential tools. Also publishable as a Foundry hosted agent (Responses) via azd. | Next.js, CopilotKit, AG-UI, Microsoft Agent Framework, Azure AI Foundry |
+| **[Health Insurance Claim Intake (HITL)](templates/health-claim-intake)** | Intake multiple claim documents, auto-fill the claim form, let the user review and edit, then submit to the insurer behind a human-in-the-loop approval gate. CopilotKit + AG-UI over one Microsoft Agent Framework agent, keyless to Azure AI Foundry; also publishable as a Foundry hosted agent via azd. | Next.js, CopilotKit, AG-UI, Microsoft Agent Framework, Azure AI Foundry |
 <!-- TEMPLATES:END -->
 
 ## Repository layout

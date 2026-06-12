@@ -1,0 +1,10 @@
+# Pinned to versions verified by `make smoke`. The AG-UI resilience patches in
+# ag_ui_app.py reach into agent_framework_ag_ui internals, so bump deliberately
+# and re-run `make smoke` after any change.
+agent-framework==1.6.0
+agent-framework-openai==1.0.1
+agent-framework-ag-ui==1.0.0rc3
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+azure-identity>=1.19.0
+python-dotenv>=1.0.0

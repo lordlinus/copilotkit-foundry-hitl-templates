@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+backend/.venv/
+src/.venv/
+backend/.env
+.env
+
+# Node / Next
+node_modules/
+frontend/.next/
+frontend/.env.local
+
+# azd
+hosted/.azure/

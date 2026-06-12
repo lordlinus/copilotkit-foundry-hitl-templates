@@ -1,0 +1,8 @@
+apiVersion: v1
+metadata:
+  name: health-claim-intake
+  displayName: Health Insurance Claim Intake (HITL)
+  description: Intake multiple claim documents, auto-fill the claim form, let the user review and edit, then submit to the insurer behind a human-in-the-loop approval gate. CopilotKit + AG-UI over one Microsoft Agent Framework agent, keyless to Azure AI Foundry; also publishable as a Foundry hosted agent via azd.
+entries:
+  - path: .
+    name: Health Insurance Claim Intake (HITL)

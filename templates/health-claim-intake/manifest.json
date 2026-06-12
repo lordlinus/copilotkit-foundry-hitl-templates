@@ -1,0 +1,25 @@
+{
+  "templateId": "health-claim-intake",
+  "displayName": "Health Insurance Claim Intake (HITL)",
+  "description": "Intake multiple claim documents, auto-fill the claim form, let the user review and edit, then submit to the insurer behind a human-in-the-loop approval gate. CopilotKit + AG-UI over one Microsoft Agent Framework agent, keyless to Azure AI Foundry; also publishable as a Foundry hosted agent via azd.",
+  "icon": "shield-check",
+  "stack": [
+    "Next.js",
+    "CopilotKit",
+    "AG-UI",
+    "Microsoft Agent Framework",
+    "Azure AI Foundry"
+  ],
+  "services": {
+    "frontend": true,
+    "agUiBackend": true,
+    "hostedAgent": true,
+    "hitl": true
+  },
+  "connection": "keyless (DefaultAzureCredential)",
+  "offlineSmoke": true,
+  "tokens": [
+    "FOUNDRY_PROJECT_ENDPOINT",
+    "AZURE_AI_MODEL_DEPLOYMENT_NAME"
+  ]
+}
