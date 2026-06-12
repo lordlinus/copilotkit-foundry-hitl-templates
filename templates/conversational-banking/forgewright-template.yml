@@ -1,0 +1,8 @@
+apiVersion: v1
+metadata:
+  name: conversational-banking
+  displayName: Conversational Banking (HITL)
+  description: A conversational banking assistant: check balances and recent activity freely, but every money movement (transfer, bill pay) pauses on an Approve/Reject widget before it executes. CopilotKit + AG-UI over one Microsoft Agent Framework agent, keyless to Azure AI Foundry; also publishable as a Foundry hosted agent via azd.
+entries:
+  - path: .
+    name: Conversational Banking (HITL)

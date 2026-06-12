@@ -1,0 +1,25 @@
+{
+  "templateId": "conversational-banking",
+  "displayName": "Conversational Banking (HITL)",
+  "description": "A conversational banking assistant: check balances and recent activity freely, but every money movement (transfer, bill pay) pauses on an Approve/Reject widget before it executes. CopilotKit + AG-UI over one Microsoft Agent Framework agent, keyless to Azure AI Foundry; also publishable as a Foundry hosted agent via azd.",
+  "icon": "bank",
+  "stack": [
+    "Next.js",
+    "CopilotKit",
+    "AG-UI",
+    "Microsoft Agent Framework",
+    "Azure AI Foundry"
+  ],
+  "services": {
+    "frontend": true,
+    "agUiBackend": true,
+    "hostedAgent": true,
+    "hitl": true
+  },
+  "connection": "keyless (DefaultAzureCredential)",
+  "offlineSmoke": true,
+  "tokens": [
+    "FOUNDRY_PROJECT_ENDPOINT",
+    "AZURE_AI_MODEL_DEPLOYMENT_NAME"
+  ]
+}

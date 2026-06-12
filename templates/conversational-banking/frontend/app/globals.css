@@ -1,0 +1,143 @@
+:root {
+  --bg: #0b1020;
+  --panel: #141a2e;
+  --line: #243049;
+  --text: #e6ebf5;
+  --muted: #8b97b3;
+  --accent: #7c9cff;
+  --ok: #3ecf8e;
+  --no: #ff6b6b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.topbar .logo {
+  font-size: 20px;
+}
+
+.topbar .title {
+  font-weight: 700;
+}
+
+.topbar .sub {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.chat {
+  flex: 1;
+  min-height: 0;
+}
+
+.card {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.card.resolved {
+  border-color: var(--ok);
+}
+
+.approval {
+  border: 1px solid var(--accent);
+  background: var(--panel);
+  border-radius: 12px;
+  margin: 8px 0;
+  overflow: hidden;
+}
+
+.approval-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #1b2440;
+  border-bottom: 1px solid var(--line);
+  font-weight: 600;
+}
+
+.pill {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.approval-body {
+  padding: 14px;
+}
+
+.approval-body .fn {
+  font-family: monospace;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.approval-body .args {
+  background: #0e1426;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 12px;
+  overflow: auto;
+}
+
+.approval-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.btn {
+  flex: 1;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn.approve {
+  background: var(--ok);
+  color: #06231a;
+}
+
+.btn.reject {
+  background: transparent;
+  color: var(--no);
+  border: 1px solid var(--no);
+}

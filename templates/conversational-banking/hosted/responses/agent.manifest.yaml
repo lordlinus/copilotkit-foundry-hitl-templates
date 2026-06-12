@@ -1,0 +1,28 @@
+name: conversational-banking
+description: >
+  A conversational banking agent with native human-in-the-loop approval: balance
+  and transaction reads run freely, while every money movement (transfer_funds,
+  pay_bill) is decorated approval_mode="always_require" so it pauses for an
+  explicit human Approve/Reject before executing. Swap the demo in-memory bank
+  for your core-banking / ledger integration.
+metadata:
+  tags:
+    - Agent Framework
+    - AI Agent Hosting
+    - Responses Protocol
+    - Human-in-the-loop
+    - Banking
+    - Conversational
+template:
+  name: conversational-banking
+  kind: hosted
+  protocols:
+    - protocol: responses
+      version: 1.0.0
+  environment_variables:
+    - name: AZURE_AI_MODEL_DEPLOYMENT_NAME
+      value: "{{AZURE_AI_MODEL_DEPLOYMENT_NAME}}"
+resources:
+  - kind: model
+    id: gpt-4.1
+    name: AZURE_AI_MODEL_DEPLOYMENT_NAME
