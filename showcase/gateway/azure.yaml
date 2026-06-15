@@ -1,0 +1,35 @@
+# azd config for the showcase gateway — ONE always-on Container App hosting all
+# gallery agents. Run `azd up` from this directory.
+#
+# `project: ../..` points the Docker build context at the repo ROOT so the
+# Dockerfile can COPY templates/<id>/{src,backend}. remoteBuild uses ACR Tasks
+# (MCR base image, so no Docker Hub rate-limit).
+name: forgewright-showcase-gateway
+metadata:
+  template: forgewright-showcase-gateway@1.0.0
+
+services:
+  gateway:
+    project: ../..
+    language: python
+    host: containerapp
+    docker:
+      path: showcase/gateway/Dockerfile
+      context: .
+      remoteBuild: true
+
+hooks:
+  postprovision:
+    shell: sh
+    run: |
+      echo ""
+      echo "=================================================================="
+      echo "Showcase gateway deployed."
+      echo "  Gateway URL : https://${SERVICE_GATEWAY_FQDN}"
+      echo ""
+      echo "Next steps:"
+      echo "  1. Set GitHub repo variable API_BASE = https://${SERVICE_GATEWAY_FQDN}"
+      echo "  2. Add that URL to ALLOWED_ORIGINS isn't needed (browser origin is"
+      echo "     your Pages site) — ensure ALLOWED_ORIGINS includes your Pages URL."
+      echo "  3. Re-run the 'Deploy showcase to Pages' workflow."
+      echo "=================================================================="

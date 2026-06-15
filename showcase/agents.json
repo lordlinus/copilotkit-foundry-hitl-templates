@@ -1,0 +1,41 @@
+{
+  "$comment": "Registry of agents featured in the showcase gallery. The gateway serves this (minus internal `port`/`backendDir`) at GET /agents; the static UI renders one card per entry and opens a chat against /agents/<id>/. `sourcePath` links back to the template that powers each agent. Keep `agentName` in sync with AGENT_NAME in templates/<id>/src/agent.py.",
+  "agents": [
+    {
+      "id": "agentic-copilot-foundry",
+      "title": "Agentic Assistant (HITL)",
+      "agentName": "forgewright_app",
+      "tagline": "The canonical stack: read freely, but every consequential action pauses for your approval.",
+      "description": "A minimal but complete CopilotKit + AG-UI + Foundry hosted-agent app. It can read a value and apply a delta — and any change pauses on a human-in-the-loop approval card before it executes.",
+      "stack": ["Next.js", "AG-UI", "Microsoft Agent Framework", "Azure AI Foundry"],
+      "sourcePath": "templates/agentic-copilot-foundry",
+      "tryPrompts": ["What is the current value?", "Apply a delta of 25."],
+      "port": 8101,
+      "backendDir": "templates/agentic-copilot-foundry/backend"
+    },
+    {
+      "id": "conversational-banking",
+      "title": "Conversational Banking (HITL)",
+      "agentName": "conversational_banking",
+      "tagline": "Check balances and activity freely — every money movement pauses for approval.",
+      "description": "A banking assistant that answers balance and transaction questions instantly, but routes transfers and bill payments through an Approve / Reject gate before any money moves.",
+      "stack": ["AG-UI", "Microsoft Agent Framework", "Azure AI Foundry"],
+      "sourcePath": "templates/conversational-banking",
+      "tryPrompts": ["What's my balance?", "Transfer $200 to my savings account."],
+      "port": 8102,
+      "backendDir": "templates/conversational-banking/backend"
+    },
+    {
+      "id": "health-claim-intake",
+      "title": "Health Claim Intake (HITL)",
+      "agentName": "health_claim_intake",
+      "tagline": "Auto-fill a claim from documents, review, then submit behind an approval gate.",
+      "description": "Intake multiple claim documents, auto-fill the claim form, let the user review and edit, then submit to the insurer behind a human-in-the-loop approval gate.",
+      "stack": ["AG-UI", "Microsoft Agent Framework", "Azure AI Foundry"],
+      "sourcePath": "templates/health-claim-intake",
+      "tryPrompts": ["Start a new claim from my documents.", "Submit the claim."],
+      "port": 8103,
+      "backendDir": "templates/health-claim-intake/backend"
+    }
+  ]
+}

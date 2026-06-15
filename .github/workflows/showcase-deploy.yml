@@ -1,0 +1,109 @@
+name: Deploy showcase gateway (azd)
+
+# Provisions + deploys the always-on showcase gateway Container App with `azd`.
+# Auth is KEYLESS via GitHub OIDC federated credentials — no stored secret.
+#
+# ── One-time setup (see showcase/gateway/DEPLOY.md) ────────────────────────────
+# Easiest: from showcase/gateway run `azd pipeline config --provider github`,
+# which creates the app registration + federated credential + GitHub secrets.
+#
+# Manual: create an Entra app registration, add a federated credential for this
+# repo, grant it Contributor + User Access Administrator on the target
+# subscription AND on the Foundry account's resource group, then set the repo
+# secrets/variables listed below.
+#
+# Required repo *secrets*:   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID
+# Required repo *variables*: AZURE_ENV_NAME, AZURE_LOCATION,
+#                            FOUNDRY_ACCOUNT_RESOURCE_ID, FOUNDRY_PROJECT_ENDPOINT,
+#                            AZURE_AI_MODEL_DEPLOYMENT_NAME, ALLOWED_ORIGINS
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'showcase/gateway/**'
+      - 'showcase/agents.json'
+      - 'templates/agentic-copilot-foundry/src/**'
+      - 'templates/agentic-copilot-foundry/backend/**'
+      - 'templates/conversational-banking/src/**'
+      - 'templates/conversational-banking/backend/**'
+      - 'templates/health-claim-intake/src/**'
+      - 'templates/health-claim-intake/backend/**'
+      - '.github/workflows/showcase-deploy.yml'
+  workflow_dispatch:
+
+# Least-privilege: id-token for OIDC, contents to checkout. `variables` write is
+# only needed if you opt into the auto-stamp step below (uses a PAT instead).
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: showcase-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
+      AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+      # Bicep params consumed by infra/main.parameters.json via ${VAR} substitution.
+      FOUNDRY_ACCOUNT_RESOURCE_ID: ${{ vars.FOUNDRY_ACCOUNT_RESOURCE_ID }}
+      FOUNDRY_PROJECT_ENDPOINT: ${{ vars.FOUNDRY_PROJECT_ENDPOINT }}
+      AZURE_AI_MODEL_DEPLOYMENT_NAME: ${{ vars.AZURE_AI_MODEL_DEPLOYMENT_NAME }}
+      ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install azd
+        uses: Azure/setup-azd@v2
+
+      - name: Log in with OIDC (federated, no secret)
+        run: |
+          azd auth login \
+            --client-id "$AZURE_CLIENT_ID" \
+            --federated-credential-provider "github" \
+            --tenant-id "$AZURE_TENANT_ID"
+
+      - name: Provision infrastructure
+        working-directory: showcase/gateway
+        run: azd provision --no-prompt
+
+      - name: Deploy gateway image
+        working-directory: showcase/gateway
+        run: azd deploy --no-prompt
+
+      - name: Report gateway URL
+        working-directory: showcase/gateway
+        run: |
+          FQDN=$(azd env get-value SERVICE_GATEWAY_FQDN 2>/dev/null || true)
+          echo "### Showcase gateway deployed" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- URL: \`https://${FQDN}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Set repo variable \`API_BASE = https://${FQDN}\` then run **Deploy showcase to Pages**." >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$FQDN" ]; then
+            for i in $(seq 1 20); do
+              code=$(curl -s -o /dev/null -w "%{http_code}" -m 10 "https://${FQDN}/healthz" || true)
+              [ "$code" = "200" ] && { echo "- Health: ✅ 200" >> "$GITHUB_STEP_SUMMARY"; break; }
+              sleep 6
+            done
+          fi
+
+      # OPTIONAL: auto-stamp the Pages site with the new gateway URL and redeploy
+      # it. Requires a repo/fine-grained PAT secret `GH_PAT` with `variables:write`
+      # + `actions:write` (the default GITHUB_TOKEN cannot set variables).
+      - name: Stamp API_BASE and trigger Pages
+        if: ${{ secrets.GH_PAT != '' }}
+        working-directory: showcase/gateway
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          FQDN=$(azd env get-value SERVICE_GATEWAY_FQDN 2>/dev/null || true)
+          if [ -n "$FQDN" ]; then
+            gh variable set API_BASE --body "https://${FQDN}" --repo "${{ github.repository }}"
+            gh workflow run "Deploy showcase to Pages" --repo "${{ github.repository }}" || true
+          fi

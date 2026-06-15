@@ -65,6 +65,14 @@ shipped — see `.agents/skills/forgewright/SKILL.md`.
 - **Offline smoke** — `LLM_MODE=mock` runs the *entire* SSE + HITL path with no
   model and no Azure, so `make smoke` is CI-able and proof, not faith.
 
+## Live showcase
+
+[`showcase/`](showcase/) is a self-contained **portfolio demo**: a tiny static
+gallery (GitHub Pages) that talks over **AG-UI/SSE** to **one always-on Container
+App** fronting every template agent — click *Try it* to chat in your browser,
+click *View source* to land on the template here. It runs the templates as-is
+(no forks) and never touches `templates/`. See [`showcase/README.md`](showcase/README.md).
+
 ## Templates
 
 <!-- TEMPLATES:START -->

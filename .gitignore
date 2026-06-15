@@ -20,3 +20,8 @@ backend/.env
 # Scratch
 .scratchpad/
 .cache/
+
+# showcase
+showcase/ui/dist/
+showcase/gateway/.env
+**/.azure/

@@ -1,0 +1,34 @@
+# Build-context excludes for the showcase gateway image (build context = repo root,
+# because the Dockerfile copies templates/<id>/{src,backend}). Keeps the context
+# small and avoids `archive/tar: write too long` from live/huge dirs.
+#
+# Only the templates' src/ + backend/ and showcase/gateway are needed; everything
+# heavy or volatile is excluded. The templates have their OWN Dockerfiles with
+# their own (template-dir) contexts, so this does not affect them.
+
+# Volatile / generated
+**/.venv
+**/node_modules
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+
+# VCS / tooling
+.git
+.github
+**/.azure
+**/.env
+**/.env.local
+*.log
+
+# Frontends + build output (the gateway image never needs these)
+templates/*/frontend
+templates/*/hosted
+showcase/ui
+**/dist
+**/.next
+
+# Docs / session noise
+**/*.md
