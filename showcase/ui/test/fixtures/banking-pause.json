@@ -1,0 +1,37 @@
+[
+  {
+    "id": "ulxntdx",
+    "role": "user",
+    "content": "Transfer 1000 from checking to savings now."
+  },
+  {
+    "id": "ccc5a5af-4011-40cf-8479-649a0d941c1d",
+    "role": "assistant",
+    "content": "",
+    "toolCalls": [
+      {
+        "id": "call_FdXVmy5S1tB5CKcXMfT04i0P",
+        "type": "function",
+        "function": {
+          "name": "transfer_funds",
+          "arguments": "{\"amount\":1000,\"to_account\":\"savings\",\"from_account\":\"checking\"}"
+        }
+      }
+    ]
+  },
+  {
+    "id": "ccc5a5af-4011-40cf-8479-649a0d941c1d-tc1",
+    "role": "assistant",
+    "content": "",
+    "toolCalls": [
+      {
+        "id": "e81b211a-3afc-4d7b-a76e-4f6b3ee0f799",
+        "type": "function",
+        "function": {
+          "name": "confirm_changes",
+          "arguments": "{\"function_name\": \"transfer_funds\", \"function_call_id\": \"call_FdXVmy5S1tB5CKcXMfT04i0P\", \"function_arguments\": {\"amount\": 1000, \"to_account\": \"savings\", \"from_account\": \"checking\"}, \"steps\": [{\"description\": \"Execute transfer_funds\", \"status\": \"enabled\"}]}"
+        }
+      }
+    ]
+  }
+]

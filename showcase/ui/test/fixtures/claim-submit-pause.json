@@ -1,0 +1,58 @@
+[
+  {
+    "id": "uqnnhgl",
+    "role": "user",
+    "content": "Extract the claim form, then submit the claim."
+  },
+  {
+    "id": "2b958050-76ac-490b-9418-efcff60d3125",
+    "content": "{\"status\": \"draft\", \"submitted_count\": 0, \"reference\": null, \"form\": {\"patient_name\": \"Jordan Rivera\", \"member_id\": \"M-4471209\", \"policy_number\": \"HX-88213\", \"provider\": \"Lakeside General Hospital\", \"service_date\": \"2026-05-18\", \"diagnosis_code\": \"J18.9\", \"diagnosis\": \"Pneumonia, unspecified organism\", \"billed_amount\": 1842.5, \"currency\": \"USD\"}, \"document_count\": 4}",
+    "role": "tool",
+    "toolCallId": "call_4XKENFfKjm871jlwkIPXw0ZH"
+  },
+  {
+    "id": "e14c20e5-f143-416f-8b63-34a334949cc2",
+    "role": "assistant",
+    "content": "",
+    "toolCalls": [
+      {
+        "id": "call_4XKENFfKjm871jlwkIPXw0ZH",
+        "type": "function",
+        "function": {
+          "name": "extract_claim_form",
+          "arguments": "{}"
+        }
+      }
+    ]
+  },
+  {
+    "id": "e14c20e5-f143-416f-8b63-34a334949cc2-tc1",
+    "role": "assistant",
+    "content": "",
+    "toolCalls": [
+      {
+        "id": "call_0DKU903rWpzI5hJpFXI578AG",
+        "type": "function",
+        "function": {
+          "name": "submit_claim",
+          "arguments": "{}"
+        }
+      }
+    ]
+  },
+  {
+    "id": "e14c20e5-f143-416f-8b63-34a334949cc2-tc2",
+    "role": "assistant",
+    "content": "",
+    "toolCalls": [
+      {
+        "id": "ebe579fa-3e3c-4786-8f09-4df709b04835",
+        "type": "function",
+        "function": {
+          "name": "confirm_changes",
+          "arguments": "{\"function_name\": \"submit_claim\", \"function_call_id\": \"call_0DKU903rWpzI5hJpFXI578AG\", \"function_arguments\": {}, \"steps\": [{\"description\": \"Execute submit_claim\", \"status\": \"enabled\"}]}"
+        }
+      }
+    ]
+  }
+]

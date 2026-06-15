@@ -1,0 +1,95 @@
+name: Showcase UI verification
+
+# Tier-1 (jsdom DOM tests) + Tier-2 (Playwright browser E2E) gate for the showcase
+# UI. Runs on every change to the UI or the agents it renders. Tier-2 starts the
+# gateway in MOCK mode (hermetic, no Azure/cost) and drives the real built UI in
+# Chromium, uploading screenshots so the HITL flow can be eyeballed.
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'showcase/ui/**'
+      - 'showcase/gateway/**'
+      - 'showcase/agents.json'
+      - 'templates/*/src/**'
+      - 'templates/*/backend/**'
+      - '.github/workflows/showcase-ui-e2e.yml'
+  pull_request:
+    paths:
+      - 'showcase/ui/**'
+      - 'showcase/gateway/**'
+  workflow_dispatch:
+
+jobs:
+  dom-tests:
+    name: Tier-1 · jsdom DOM tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: showcase/ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm run test:dom
+
+  e2e:
+    name: Tier-2 · Playwright (browser)
+    runs-on: ubuntu-latest
+    needs: dom-tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      # Gateway (mock mode) — hermetic, no Azure.
+      - name: Set up gateway
+        working-directory: showcase/gateway
+        run: |
+          uv venv --python 3.12 .venv
+          uv pip install --python .venv/bin/python --prerelease=allow -r requirements.txt
+      - name: Start gateway (LLM_MODE=mock)
+        working-directory: showcase/gateway
+        run: |
+          LLM_MODE=mock PORT=8080 .venv/bin/python launcher.py > /tmp/gateway.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:8080/healthz && break; sleep 2; done
+
+      # UI — build + preview, then E2E in Chromium against the mock gateway.
+      - name: Build UI
+        working-directory: showcase/ui
+        env:
+          VITE_API_BASE: http://localhost:8080
+        run: |
+          npm ci
+          npm run build
+      - name: Install Playwright Chromium
+        working-directory: showcase/ui
+        run: npx playwright install --with-deps chromium
+      - name: Start preview
+        working-directory: showcase/ui
+        run: |
+          npm run preview -- --port 4173 > /tmp/preview.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:4173/ && break; sleep 1; done
+      - name: Run E2E
+        working-directory: showcase/ui
+        env:
+          BASE_URL: http://localhost:4173
+        run: npm run test:e2e
+      - name: Upload screenshots + report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: showcase-e2e-artifacts
+          path: |
+            showcase/ui/screenshots/
+            showcase/ui/playwright-report/
+          if-no-files-found: ignore

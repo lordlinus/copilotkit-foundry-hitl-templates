@@ -49,10 +49,15 @@ showcase/
     Dockerfile             MCR base; build context = repo root (copies templates/<id>)
     azure.yaml + infra/    azd: one Container App (scale-to-zero), ACR, managed identity, roles
   ui/                      static gallery + AG-UI chat (Vite + TypeScript)
-    src/{main,chat,config,styles}
+    src/{main,chat,config}
+    src/transcript.ts      pure, testable transcript renderer (forms, HITL cards)
+    test/dom.test.mjs      Tier-1 jsdom DOM tests over recorded per-agent fixtures
+    test/e2e/              Tier-2 Playwright browser E2E (+ screenshots)
     public/config.js       runtime gateway URL, stamped at publish time
-  Makefile                 install / gateway / ui-dev / smoke / deploy
-  ../.github/workflows/showcase-pages.yml   builds ui/ and deploys to Pages
+  Makefile                 install / gateway / ui-dev / verify / smoke / deploy
+  ../.github/workflows/showcase-pages.yml    builds ui/ and deploys to Pages
+  ../.github/workflows/showcase-deploy.yml   azd up the gateway (OIDC, no secret)
+  ../.github/workflows/showcase-ui-e2e.yml   Tier-1 + Tier-2 UI verification
 ```
 
 ---
@@ -78,6 +83,32 @@ Offline plumbing check (no Azure, no cost) — drives the full AG-UI + HITL path
 make smoke                  # starts the gateway in LLM_MODE=mock and asserts
                             # read works, action PAUSES, approve executes, reject doesn't
 ```
+
+---
+
+## Verifying the UI (don't ship a UI on backend smoke alone)
+
+Backend smoke proves the protocol; it can't see render/UX or browser-only bugs.
+The showcase has a two-tier UI gate:
+
+```bash
+make verify                 # Tier-1: production build + jsdom DOM tests
+                            # (asserts the approval card + buttons render, the
+                            #  "what am I approving?" preview is never empty, and
+                            #  a form result renders as a form — not raw JSON)
+
+cd ui && npm run test:e2e   # Tier-2: Playwright in a real browser against a
+                            # mock-mode gateway (catches the @ag-ui/client
+                            # detached-fetch crash, approval cards below the fold,
+                            # etc.) and screenshots each agent's HITL flow
+```
+
+Both tiers run in CI (`.github/workflows/showcase-ui-e2e.yml`); Tier-2 starts the
+gateway in `LLM_MODE=mock`, so it needs no Azure. DOM-test fixtures in
+`ui/test/fixtures/` are recorded from the real agents.
+
+> **Definition of done for a UI change:** `make verify` passes locally and the
+> Playwright job is green with screenshots — *not* "the dev server started".
 
 ---
 

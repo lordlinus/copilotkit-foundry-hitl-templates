@@ -25,3 +25,11 @@ backend/.env
 showcase/ui/dist/
 showcase/gateway/.env
 **/.azure/
+showcase/ui/screenshots/
+showcase/ui/playwright-report/
+showcase/ui/test-results/
+showcase/gateway/.venv/
+showcase/ui/.azure/
+screenshots/
+playwright-report/
+test-results/

@@ -1,0 +1,54 @@
+[
+  {
+    "id": "uny2qse",
+    "role": "user",
+    "content": "Extract the claim form."
+  },
+  {
+    "id": "28a79461-8da4-4b9a-ac6d-1b73e6680966",
+    "content": "{\"documents\": [{\"id\": \"claim_form.pdf\", \"kind\": \"claim_form\"}, {\"id\": \"hospital_invoice.pdf\", \"kind\": \"invoice\"}, {\"id\": \"discharge_summary.pdf\", \"kind\": \"clinical\"}, {\"id\": \"insurance_card.jpg\", \"kind\": \"insurance_card\"}], \"count\": 4}",
+    "role": "tool",
+    "toolCallId": "call_eEazb0arDtPNpeai1aVQ99pv"
+  },
+  {
+    "id": "97e1d3f0-ec43-4d6e-ade7-4e3764972278",
+    "content": "{\"status\": \"draft\", \"submitted_count\": 0, \"reference\": null, \"form\": {\"patient_name\": \"Jordan Rivera\", \"member_id\": \"M-4471209\", \"policy_number\": \"HX-88213\", \"provider\": \"Lakeside General Hospital\", \"service_date\": \"2026-05-18\", \"diagnosis_code\": \"J18.9\", \"diagnosis\": \"Pneumonia, unspecified organism\", \"billed_amount\": 1842.5, \"currency\": \"USD\"}, \"document_count\": 4}",
+    "role": "tool",
+    "toolCallId": "call_bPrK1dxpCm41sEUWJPOPXvrG"
+  },
+  {
+    "id": "b33c2be8-a129-45f5-bb66-cb4329ba1737",
+    "role": "assistant",
+    "content": "",
+    "toolCalls": [
+      {
+        "id": "call_eEazb0arDtPNpeai1aVQ99pv",
+        "type": "function",
+        "function": {
+          "name": "list_documents",
+          "arguments": "{}"
+        }
+      }
+    ]
+  },
+  {
+    "id": "b33c2be8-a129-45f5-bb66-cb4329ba1737-tc1",
+    "role": "assistant",
+    "content": "",
+    "toolCalls": [
+      {
+        "id": "call_bPrK1dxpCm41sEUWJPOPXvrG",
+        "type": "function",
+        "function": {
+          "name": "extract_claim_form",
+          "arguments": "{}"
+        }
+      }
+    ]
+  },
+  {
+    "id": "3a3758e6-a783-44b6-bcad-6016e2d9592a",
+    "role": "assistant",
+    "content": "The claim form has been auto-filled from your provided documents. Here are the extracted details:\n\n- Patient Name: Jordan Rivera\n- Member ID: M-4471209\n- Policy Number: HX-88213\n- Provider: Lakeside General Hospital\n- Service Date: 2026-05-18\n- Diagnosis Code: J18.9\n- Diagnosis: Pneumonia, unspecified organism\n- Billed Amount: 1842.5 USD\n\nLet me know if you need any corrections or wish to continue with submission."
+  }
+]

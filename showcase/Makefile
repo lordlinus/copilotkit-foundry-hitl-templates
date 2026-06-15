@@ -4,13 +4,15 @@ SHELL := /bin/bash
 GATEWAY_DIR := gateway
 UI_DIR := ui
 
-.PHONY: help install gateway ui-dev ui-build smoke deploy pages-build clean
+.PHONY: help install gateway ui-dev ui-build verify test-dom smoke deploy pages-build clean
 
 help:
 	@echo "make install      - set up the gateway venv (uv) + UI deps (npm)"
 	@echo "make gateway      - run the multi-agent gateway on :8080 (real Foundry)"
 	@echo "make ui-dev       - run the static gallery UI on :5173 (Vite dev server)"
 	@echo "make ui-build     - production build of the UI into ui/dist"
+	@echo "make verify       - UI build + Tier-1 jsdom DOM tests (render/UX gate)"
+	@echo "make test-dom     - run the Tier-1 jsdom DOM tests only"
 	@echo "make smoke        - offline end-to-end HITL smoke (LLM_MODE=mock) via the gateway"
 	@echo "make deploy       - azd up the gateway Container App (from gateway/)"
 	@echo ""
@@ -31,6 +33,14 @@ ui-dev:
 
 ui-build:
 	cd $(UI_DIR) && npm run build
+
+test-dom:
+	cd $(UI_DIR) && npm run test:dom
+
+# UI render/UX gate: production build must compile AND the jsdom DOM tests must
+# pass. Backend `make smoke` is necessary but not sufficient for a UI change.
+verify: ui-build test-dom
+	@echo "✓ showcase UI verified (build + DOM tests)"
 
 smoke:
 	@echo "Starting gateway in mock mode and running the HITL smoke…"
