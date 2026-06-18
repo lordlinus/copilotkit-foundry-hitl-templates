@@ -1,4 +1,4 @@
-name: forgewright-app
+name: agentic-copilot-foundry
 description: >
   A domain-agnostic Microsoft Agent Framework starter agent with native
   human-in-the-loop approval: read tools run freely, while any tool decorated
@@ -11,7 +11,7 @@ metadata:
     - Responses Protocol
     - Human-in-the-loop
 template:
-  name: forgewright-app
+  name: agentic-copilot-foundry
   kind: hosted
   protocols:
     - protocol: responses

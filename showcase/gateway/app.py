@@ -73,7 +73,7 @@ _AGENTS = _load_registry()
 _PORT_BY_ID = {a["id"]: int(a["port"]) for a in _AGENTS}
 
 # Public view of the registry — internal fields stripped.
-_PUBLIC_FIELDS = ("id", "title", "agentName", "tagline", "description", "stack", "sourcePath", "tryPrompts")
+_PUBLIC_FIELDS = ("id", "title", "agentName", "tagline", "description", "stack", "sourcePath", "tryPrompts", "tools")
 _PUBLIC_AGENTS = [{k: a[k] for k in _PUBLIC_FIELDS if k in a} for a in _AGENTS]
 
 app = FastAPI(title="forgewright showcase gateway")

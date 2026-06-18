@@ -24,6 +24,10 @@ forked — so the showcase always reflects the real, shippable code.
 - **Human-in-the-loop, for real.** Read tools answer instantly; any consequential
   tool **pauses** on an Approve / Reject card and only runs once you approve.
 
+> **How AG-UI is wired** (who provides it per agent, framework vs hand-rolled, and
+> the GitHub Copilot SDK’s AG-UI story): see
+> [`docs/ag-ui-architecture.md`](docs/ag-ui-architecture.md).
+
 ```
  ┌─────────────────────────┐      AG-UI / SSE        ┌──────────────────────────────┐
  │  Static gallery (Pages)  │ ───────────────────────▶│  Gateway (Azure Container App)│

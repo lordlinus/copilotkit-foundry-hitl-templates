@@ -9,10 +9,11 @@ mkdirSync(SHOT_DIR, { recursive: true });
 
 async function openAgent(page: Page, cardTitle: string) {
   await page.goto("/");
-  const card = page.locator(".card", { hasText: cardTitle });
-  await expect(card).toBeVisible();
-  await card.getByRole("button", { name: /Try it/ }).click();
-  await expect(page.locator(".drawer")).toBeVisible();
+  // Console layout: pick the agent in the left rail.
+  const item = page.locator(".agent-item", { hasText: cardTitle });
+  await expect(item).toBeVisible();
+  await item.click();
+  await expect(page.locator(".chat-panel .transcript")).toBeVisible();
 }
 
 async function send(page: Page, text: string) {
@@ -21,10 +22,11 @@ async function send(page: Page, text: string) {
   await page.locator(".composer button[type=submit]").click();
 }
 
-test("gallery renders three agent cards", async ({ page }) => {
+test("console renders the agent picker with all agents", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator(".card")).toHaveCount(3);
-  await page.screenshot({ path: `${SHOT_DIR}/gallery.png`, fullPage: true });
+  await expect(page.locator(".agent-item")).toHaveCount(4);
+  await expect(page.locator(".chat-panel")).toBeVisible();
+  await page.screenshot({ path: `${SHOT_DIR}/console.png`, fullPage: true });
 });
 
 test("banking: consequential action shows a VISIBLE approval card with Approve/Reject", async ({ page }) => {

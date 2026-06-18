@@ -23,6 +23,7 @@ export class Chat {
   private running = false;
   private errored: string | null = null;
   private expandedForms = new Set<string>();
+  private decisions = new Map<string, boolean>();
 
   constructor(info: AgentInfo, private transcriptEl: HTMLElement) {
     void info; // reserved for future per-agent rendering tweaks
@@ -75,6 +76,9 @@ export class Chat {
   }
 
   private async resolveApproval(toolCallId: string, accepted: boolean, steps: any): Promise<void> {
+    // Record the user's decision — authoritative even after the backend rewrites
+    // the tool-result content in later snapshots.
+    this.decisions.set(toolCallId, accepted);
     const resolvedSteps = accepted
       ? steps
       : (Array.isArray(steps) ? steps.map((s: any) => ({ ...s, status: "disabled" })) : steps);
@@ -108,6 +112,7 @@ export class Chat {
       running: this.running,
       errored: this.errored,
       expandedForms: this.expandedForms,
+      decisions: this.decisions,
       onApprove: (id, steps) => this.resolveApproval(id, true, steps),
       onReject: (id, steps) => this.resolveApproval(id, false, steps),
       onEditField: (k, v) => this.editField(k, v),

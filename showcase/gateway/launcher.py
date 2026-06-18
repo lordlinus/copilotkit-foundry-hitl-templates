@@ -36,14 +36,24 @@ def _log(msg: str) -> None:
 
 def _spawn_backend(agent: dict) -> subprocess.Popen:
     backend_dir = (REPO_ROOT / agent["backendDir"]).resolve()
+    port = str(agent["port"])
+    runtime = agent.get("runtime", "python")
+    env = {**os.environ, "PORT": port}
+    if runtime == "node":
+        entry = backend_dir / "dist" / "index.js"
+        if not entry.exists():
+            raise FileNotFoundError(
+                f"{entry} not found — build the Node agent first (npm install && npm run build in {backend_dir})"
+            )
+        _log(f"starting '{agent['id']}' Node backend on :{port} (cwd={backend_dir})")
+        return subprocess.Popen(["node", "dist/index.js"], cwd=str(backend_dir), env=env)
     if not (backend_dir / "ag_ui_app.py").exists():
         raise FileNotFoundError(f"ag_ui_app.py not found in {backend_dir}")
-    port = str(agent["port"])
     _log(f"starting '{agent['id']}' backend on :{port} (cwd={backend_dir})")
     return subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "ag_ui_app:app", "--host", "127.0.0.1", "--port", port],
         cwd=str(backend_dir),
-        env={**os.environ},
+        env=env,
     )
 
 

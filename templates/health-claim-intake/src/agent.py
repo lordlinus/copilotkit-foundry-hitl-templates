@@ -105,6 +105,16 @@ class _ClaimStore:
             "count": len(self.documents),
         }
 
+    def read_markdown(self, document_id: str) -> dict:
+        """Extract one document's content as Markdown (Document Intelligence)."""
+        from docintel import extract_markdown
+
+        doc = next((d for d in self.documents if d["id"] == document_id), None)
+        if doc is None:
+            return {"error": f"No document with id '{document_id}'",
+                    "available": [d["id"] for d in self.documents]}
+        return {"id": doc["id"], "kind": doc["kind"], "markdown": extract_markdown(doc)}
+
     def extract(self) -> dict:
         """Derive the claim form from the intake documents (deterministic demo)."""
         self.form = {
@@ -163,6 +173,9 @@ handler turn uploaded documents into a complete, accurate claim and submit it.
 
 Workflow:
 - Use `list_documents` to see which intake documents are available.
+- Use `read_document_markdown(document_id)` to read a single document's full \
+content as Markdown (Azure Document Intelligence) when you need detail or to \
+verify a field.
 - Use `extract_claim_form` to auto-fill the claim form from those documents. \
 Never invent field values — only report what extraction returns.
 - If the user wants to correct a value, call `update_claim_field(field, value)`. \
@@ -195,6 +208,17 @@ async def extract_claim_form() -> str:
 
 
 @tool
+async def read_document_markdown(document_id: str) -> str:
+    """Read one intake document and return its content as Markdown.
+
+    Uses Azure Document Intelligence (prebuilt-layout, Markdown output) when a
+    `DOCUMENTINTELLIGENCE_ENDPOINT` is configured; otherwise returns a mock so the
+    demo runs offline. Read-only — no approval needed.
+    """
+    return json.dumps(STORE.read_markdown(document_id), ensure_ascii=False)
+
+
+@tool
 async def get_claim() -> str:
     """Return the current claim: form fields, status, and submission reference."""
     return json.dumps(STORE.snapshot(), ensure_ascii=False)
@@ -216,6 +240,7 @@ async def submit_claim() -> str:
 
 AGENT_TOOLS = [
     list_documents,
+    read_document_markdown,
     extract_claim_form,
     get_claim,
     update_claim_field,

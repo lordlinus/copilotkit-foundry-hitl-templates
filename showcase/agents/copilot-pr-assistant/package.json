@@ -1,0 +1,22 @@
+{
+  "name": "copilot-pr-assistant",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "AG-UI backend powered by the GitHub Copilot SDK: Copilot drafts a pull request and the open_pull_request action is human-in-the-loop gated. Same architecture as the forgewright showcase, different engine.",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "@azure/identity": "^4.5.0",
+    "@github/copilot-sdk": "latest",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  }
+}

@@ -1,0 +1,6 @@
+github-copilot-sdk
+agent-framework-foundry-hosting
+mcp>=1.24.0,<2
+azure-identity>=1.19.0
+aiohttp>=3.10.0
+python-dotenv>=1.0.0

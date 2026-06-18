@@ -1,24 +1,30 @@
-// Showcase gallery + chat shell. Renders one card per agent (fetched live from the
-// gateway's /agents, with a bundled fallback so the portfolio still renders if the
-// backend is asleep), and opens an AG-UI chat drawer when you click "Try it".
+// Showcase front door — a two-panel "console":
+//   • LEFT rail: agent picker, the selected agent's guided sample questions
+//     (click to run), its tool list (capabilities at a glance), and a source link.
+//   • RIGHT: the live AG-UI chat for the selected agent.
+// This replaces the card-gallery + "Try it" drawer so a newcomer understands the
+// offering and can run it in seconds — in the spirit of the isolation demo.
 
 import { API_BASE, sourceUrl, type AgentInfo } from "./config";
 import { Chat } from "./chat";
 import "./styles.css";
 
-// Fallback registry — keeps the gallery (concept + source links) alive even when
-// the always-on gateway is unreachable. Live data from /agents overrides this.
+// Bundled fallback so the console still renders if the gateway is asleep.
 const FALLBACK_AGENTS: AgentInfo[] = [
   {
     id: "agentic-copilot-foundry",
     title: "Agentic Assistant (HITL)",
     agentName: "forgewright_app",
-    tagline: "The canonical stack: read freely, but every consequential action pauses for your approval.",
+    tagline: "Read freely, but every consequential action pauses for your approval.",
     description:
-      "A minimal but complete AG-UI + Foundry hosted-agent app. It can read a value and apply a delta — and any change pauses on a human-in-the-loop approval card before it executes.",
+      "A minimal but complete AG-UI + Foundry hosted-agent app. It can read a value and apply a delta — any change pauses on a human-in-the-loop approval card before it executes.",
     stack: ["AG-UI", "Microsoft Agent Framework", "Azure AI Foundry"],
     sourcePath: "templates/agentic-copilot-foundry",
     tryPrompts: ["What is the current value?", "Apply a delta of 25."],
+    tools: [
+      { name: "get_value", description: "Read the current value" },
+      { name: "apply_delta", description: "Change the value by a delta", consequential: true },
+    ],
   },
   {
     id: "conversational-banking",
@@ -30,6 +36,12 @@ const FALLBACK_AGENTS: AgentInfo[] = [
     stack: ["AG-UI", "Microsoft Agent Framework", "Azure AI Foundry"],
     sourcePath: "templates/conversational-banking",
     tryPrompts: ["What's my balance?", "Transfer $200 to my savings account."],
+    tools: [
+      { name: "get_balance", description: "Read account balances" },
+      { name: "list_transactions", description: "List recent activity" },
+      { name: "transfer_funds", description: "Move money between accounts", consequential: true },
+      { name: "pay_bill", description: "Pay a biller", consequential: true },
+    ],
   },
   {
     id: "health-claim-intake",
@@ -40,7 +52,29 @@ const FALLBACK_AGENTS: AgentInfo[] = [
       "Intake multiple claim documents, auto-fill the claim form, let the user review and edit, then submit to the insurer behind a human-in-the-loop approval gate.",
     stack: ["AG-UI", "Microsoft Agent Framework", "Azure AI Foundry"],
     sourcePath: "templates/health-claim-intake",
-    tryPrompts: ["Start a new claim from my documents.", "Submit the claim."],
+    tryPrompts: ["List my claim documents", "Extract the claim form", "Submit the claim"],
+    tools: [
+      { name: "list_documents", description: "List uploaded claim documents" },
+      { name: "extract_claim_form", description: "Auto-fill the claim from documents" },
+      { name: "update_claim_field", description: "Correct a field on the claim" },
+      { name: "submit_claim", description: "Submit the claim to the insurer", consequential: true },
+    ],
+  },
+  {
+    id: "copilot-pr-assistant",
+    title: "Copilot PR Assistant (HITL)",
+    agentName: "copilot_pr_assistant",
+    tagline: "GitHub Copilot drafts a pull request — opening it pauses for your approval.",
+    description:
+      "Powered by the GitHub Copilot SDK (not Microsoft Agent Framework): Copilot reviews the changed files, drafts a PR title and body, and the open_pull_request action pauses on a human-in-the-loop approval card before it executes. Same AG-UI architecture, different engine.",
+    stack: ["AG-UI", "GitHub Copilot SDK", "Azure (APIM) gpt-5"],
+    sourcePath: "showcase/agents/copilot-pr-assistant",
+    tryPrompts: ["List the changed files", "Review the changes and open a pull request"],
+    tools: [
+      { name: "list_changed_files", description: "List files changed on the branch" },
+      { name: "get_file_diff", description: "Show the diff for a file" },
+      { name: "propose_pull_request", description: "Draft + open the PR", consequential: true },
+    ],
   },
 ];
 
@@ -52,7 +86,7 @@ async function loadAgents(): Promise<{ agents: AgentInfo[]; live: boolean }> {
       if (Array.isArray(data.agents) && data.agents.length) return { agents: data.agents, live: true };
     }
   } catch {
-    /* gateway asleep — fall back to the bundled registry */
+    /* gateway asleep — use the bundled registry */
   }
   return { agents: FALLBACK_AGENTS, live: false };
 }
@@ -68,91 +102,104 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-function card(info: AgentInfo): HTMLElement {
-  const c = el("article", "card");
-  c.appendChild(el("h3", "card-title", info.title));
-  c.appendChild(el("p", "card-tagline", info.tagline));
-  const chips = el("div", "chips");
-  for (const s of info.stack) chips.appendChild(el("span", "chip", s));
-  c.appendChild(chips);
-  c.appendChild(el("p", "card-desc", info.description));
-
-  const actions = el("div", "card-actions");
-  const tryBtn = el("button", "btn primary", "▶ Try it");
-  tryBtn.onclick = () => openChat(info);
-  const src = el("a", "btn ghost", "‹ › View source");
-  (src as HTMLAnchorElement).href = sourceUrl(info.sourcePath);
-  (src as HTMLAnchorElement).target = "_blank";
-  (src as HTMLAnchorElement).rel = "noopener";
-  actions.appendChild(tryBtn);
-  actions.appendChild(src);
-  c.appendChild(actions);
-  return c;
+interface ConsoleState {
+  agents: AgentInfo[];
+  live: boolean;
+  selectedId: string;
 }
 
-let openChatRef: { close: () => void } | null = null;
+let currentChat: Chat | null = null;
 
-function openChat(info: AgentInfo): void {
-  openChatRef?.close();
-  const overlay = el("div", "drawer-overlay");
-  const drawer = el("aside", "drawer");
+function selectAgent(state: ConsoleState, id: string): void {
+  state.selectedId = id;
+  renderAgentPicker(state);
+  renderDetail(state);
+}
 
-  const head = el("div", "drawer-head");
-  head.appendChild(el("div", "drawer-title", `${info.title}`));
-  const close = el("button", "drawer-close", "✕");
-  const closeFn = () => {
-    overlay.remove();
-    openChatRef = null;
-  };
-  close.onclick = closeFn;
-  head.appendChild(close);
-  drawer.appendChild(head);
+function renderAgentPicker(state: ConsoleState): void {
+  const list = document.getElementById("agent-list")!;
+  list.innerHTML = "";
+  for (const a of state.agents) {
+    const item = el("button", "agent-item" + (a.id === state.selectedId ? " active" : ""));
+    item.dataset.agentId = a.id;
+    item.innerHTML = `<span class="agent-item-title">${a.title}</span><span class="agent-item-tagline">${a.tagline}</span>`;
+    item.onclick = () => selectAgent(state, a.id);
+    list.appendChild(item);
+  }
+}
 
+function renderDetail(state: ConsoleState): void {
+  const agent = state.agents.find((a) => a.id === state.selectedId)!;
+
+  // ── Left: guided questions + tools for the selected agent ──
+  const guide = document.getElementById("agent-guide")!;
+  guide.innerHTML = "";
+  guide.appendChild(el("div", "guide-section-title", "Try asking"));
+  const qWrap = el("div", "guide-questions");
+  for (const p of agent.tryPrompts) {
+    const b = el("button", "guide-question", p);
+    b.onclick = () => runPrompt(p);
+    qWrap.appendChild(b);
+  }
+  guide.appendChild(qWrap);
+
+  if (agent.tools && agent.tools.length) {
+    guide.appendChild(el("div", "guide-section-title", "Tools"));
+    const tWrap = el("div", "guide-tools");
+    for (const t of agent.tools) {
+      const row = el("div", "guide-tool");
+      row.innerHTML =
+        `<span class="guide-tool-name">${t.name}</span>` +
+        (t.consequential ? `<span class="guide-tool-badge">approval</span>` : "") +
+        `<span class="guide-tool-desc">${t.description}</span>`;
+      tWrap.appendChild(row);
+    }
+    guide.appendChild(tWrap);
+  }
+
+  const src = el("a", "guide-source", "‹ › View source");
+  (src as HTMLAnchorElement).href = sourceUrl(agent.sourcePath);
+  (src as HTMLAnchorElement).target = "_blank";
+  (src as HTMLAnchorElement).rel = "noopener";
+  guide.appendChild(src);
+
+  // ── Right: a fresh chat panel bound to this agent ──
+  const panel = document.getElementById("chat-panel")!;
+  panel.innerHTML = "";
+  panel.appendChild(el("div", "chat-head", `<span class="chat-title">${agent.title}</span>`));
   const transcript = el("div", "transcript");
   const empty = el("div", "transcript-empty");
-  empty.innerHTML = `<p>Try one of these:</p>`;
-  const quick = el("div", "quick");
-  for (const p of info.tryPrompts) {
-    const b = el("button", "quick-chip", p);
-    b.onclick = () => doSend(p);
-    quick.appendChild(b);
-  }
-  empty.appendChild(quick);
+  empty.innerHTML = `<p>Pick a sample question on the left, or ask your own below.</p>`;
   transcript.appendChild(empty);
-  drawer.appendChild(transcript);
+  panel.appendChild(transcript);
 
-  const chat = new Chat(info, transcript);
+  currentChat = new Chat(agent, transcript);
 
   const form = el("form", "composer") as HTMLFormElement;
   const input = el("input", "composer-input") as HTMLInputElement;
-  input.placeholder = "Ask the agent…";
+  input.placeholder = `Ask ${agent.title}…`;
   input.autocomplete = "off";
   const send = el("button", "btn primary", "Send") as HTMLButtonElement;
   send.type = "submit";
   form.appendChild(input);
   form.appendChild(send);
-
-  function doSend(text: string) {
-    empty.remove();
-    input.value = "";
-    chat.send(text);
-  }
   form.onsubmit = (e) => {
     e.preventDefault();
-    doSend(input.value);
+    const text = input.value;
+    input.value = "";
+    runPrompt(text);
   };
-  drawer.appendChild(form);
-
-  overlay.appendChild(drawer);
-  overlay.onclick = (e) => {
-    if (e.target === overlay) closeFn();
-  };
-  document.body.appendChild(overlay);
-  input.focus();
-  openChatRef = { close: closeFn };
+  panel.appendChild(form);
 }
 
-function render(agents: AgentInfo[], live: boolean): void {
+function runPrompt(text: string): void {
+  if (!text.trim() || !currentChat) return;
+  const empty = document.querySelector(".transcript-empty");
+  if (empty) empty.remove();
+  void currentChat.send(text);
+}
+
+function render(state: ConsoleState): void {
   const app = document.getElementById("app")!;
   app.innerHTML = "";
 
@@ -160,43 +207,38 @@ function render(agents: AgentInfo[], live: boolean): void {
   header.innerHTML = `
     <span class="logo">⚒︎</span>
     <span class="brand">forgewright</span>
-    <span class="brand-sub">Agent Showcase</span>
+    <span class="brand-sub">Agent Console</span>
     <span class="spacer"></span>
-    <span class="status ${live ? "live" : "idle"}">${live ? "● gateway live" : "○ gateway asleep"}</span>
+    <span class="status ${state.live ? "live" : "idle"}">${state.live ? "● gateway live" : "○ gateway asleep"}</span>
     <a class="topbar-link" href="https://github.com/lordlinus/forgewright" target="_blank" rel="noopener">GitHub ↗</a>
   `;
   app.appendChild(header);
 
-  const hero = el("section", "hero");
-  hero.innerHTML = `
-    <h1>A portfolio of <span class="accent">agentic apps</span> you can try right now.</h1>
-    <p class="lede">
-      Each app is one <strong>Microsoft Agent Framework</strong> agent, served over the open
-      <a href="https://docs.ag-ui.com/introduction" target="_blank" rel="noopener">AG-UI</a> protocol,
-      connected keyless to <strong>Azure AI Foundry</strong> — with native
-      <strong>human-in-the-loop approval</strong> on every consequential action.
-      Click <em>Try it</em> to chat in your browser; click <em>View source</em> to build your own.
-    </p>
-    <div class="arch">
-      <span class="arch-node">This page<br/><small>GitHub Pages</small></span>
-      <span class="arch-arrow">── AG-UI / SSE ▶</span>
-      <span class="arch-node">One gateway<br/><small>Azure Container App</small></span>
-      <span class="arch-arrow">▶</span>
-      <span class="arch-node">N agents<br/><small>Foundry hosted</small></span>
+  const main = el("div", "console");
+  const rail = el("aside", "rail");
+  rail.innerHTML = `
+    <div class="rail-intro">
+      <p>Each app is one agent over the open
+        <a href="https://docs.ag-ui.com/introduction" target="_blank" rel="noopener">AG-UI</a>
+        protocol with native <strong>human-in-the-loop approval</strong>. Pick an agent, then a
+        sample question.</p>
     </div>
+    <div class="rail-section-title">Agents</div>
+    <div id="agent-list" class="agent-list"></div>
+    <div id="agent-guide" class="agent-guide"></div>
   `;
-  app.appendChild(hero);
+  const panel = el("section", "chat-panel");
+  panel.id = "chat-panel";
+  main.appendChild(rail);
+  main.appendChild(panel);
+  app.appendChild(main);
 
-  const gallery = el("section", "gallery");
-  for (const a of agents) gallery.appendChild(card(a));
-  app.appendChild(gallery);
-
-  const footer = el("footer", "footer");
-  footer.innerHTML = `Built with the <a href="https://github.com/lordlinus/forgewright" target="_blank" rel="noopener">forgewright</a> template gallery · AG-UI · CopilotKit-compatible · Azure AI Foundry`;
-  app.appendChild(footer);
+  renderAgentPicker(state);
+  renderDetail(state);
 }
 
 (async () => {
   const { agents, live } = await loadAgents();
-  render(agents, live);
+  const state: ConsoleState = { agents, live, selectedId: agents[0]?.id };
+  render(state);
 })();

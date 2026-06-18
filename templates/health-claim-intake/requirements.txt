@@ -1,0 +1,12 @@
+# agent-framework-core (NOT the agent-framework meta-package, which drags in
+# agent-framework-hyperlight → hyperlight-sandbox-backend-wasm and fails Foundry's
+# remote build). mcp is imported by foundry-hosting and not pulled transitively.
+agent-framework-core==1.8.1
+agent-framework-openai==1.8.1
+agent-framework-foundry-hosting
+mcp>=1.24.0,<2
+# read_document_markdown (src/docintel.py) uses Document Intelligence (lazy import,
+# has a mock fallback) — include so the tool works against a real DocIntel endpoint.
+azure-ai-documentintelligence>=1.0.0
+azure-identity>=1.19.0
+python-dotenv>=1.0.0

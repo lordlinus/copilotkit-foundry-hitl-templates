@@ -33,3 +33,5 @@ showcase/ui/.azure/
 screenshots/
 playwright-report/
 test-results/
+**/.copilot-home/
+**/spark-ui

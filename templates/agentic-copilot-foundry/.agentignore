@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+.azure/
+.git/
+node_modules/
+frontend/
+backend/
+hosted/
+scripts/
+tests/
+test/
+*.md
+Makefile
+.env
+.env.*

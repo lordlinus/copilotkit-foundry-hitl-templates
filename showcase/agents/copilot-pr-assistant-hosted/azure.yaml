@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+requiredVersions:
+    extensions:
+        azure.ai.agents: '>=0.1.0-preview'
+name: copilot-pr-assistant-hosted
+services:
+    copilot-pr-assistant-hosted:
+        project: .
+        host: azure.ai.agent
+        language: docker
+        docker:
+            path: Dockerfile
+            context: .
+            remoteBuild: true
+        config:
+            container:
+                resources:
+                    cpu: "0.5"
+                    memory: 1Gi

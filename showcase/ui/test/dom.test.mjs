@@ -47,6 +47,7 @@ function renderInto(messages, opts = {}) {
     running: false,
     errored: null,
     expandedForms: new Set(opts.expanded || []),
+    decisions: new Map(Object.entries(opts.decisions || {})),
     onApprove: () => {},
     onReject: () => {},
     onEditField: (k, v) => edits.push([k, v]),
@@ -107,4 +108,52 @@ test("claim submit pause: approval preview is the form, not empty {}", () => {
   const form = el.querySelector(".approval .formcard");
   const pre = el.querySelector(".approval .args");
   assert.ok(form || (pre && pre.textContent.trim() !== "{}"), "submit approval shows the record, not empty {}");
+});
+
+// Regression: an APPROVED gate must render "Approved", even when the backend has
+// rewritten the tool-result content to the string "Confirmed" (its HITL snapshot
+// patch). The user's recorded decision is authoritative.
+test("resolved approval shows Approved when content was rewritten to 'Confirmed'", () => {
+  const ccId = "call_cc";
+  const messages = [
+    { id: "u1", role: "user", content: "Transfer 100." },
+    { id: "a1", role: "assistant", content: "", toolCalls: [
+      { id: ccId, type: "function", function: { name: "confirm_changes", arguments: JSON.stringify({ function_name: "transfer_funds", function_arguments: { amount: 100 }, steps: [] }) } },
+    ] },
+    // backend rewrote {accepted:true} -> "Confirmed"
+    { id: "t1", role: "tool", toolCallId: ccId, content: "Confirmed" },
+  ];
+  // (a) no local decision -> infer from content
+  const inferred = renderInto(messages);
+  const card1 = inferred.el.querySelector(".approval");
+  assert.ok(card1.classList.contains("approved"), "inferred from 'Confirmed' -> approved");
+  assert.match(card1.textContent, /Approved/);
+  assert.doesNotMatch(card1.textContent, /Rejected/);
+
+  // (b) local decision is authoritative
+  const decided = renderInto(messages, { decisions: { [ccId]: true } });
+  assert.ok(decided.el.querySelector(".approval").classList.contains("approved"));
+});
+
+// Regression (agentic shape): even with NO local decision and NO "Confirmed"
+// string, an executed gated tool result (keyed by confirm_changes.function_call_id)
+// proves approval. This survives reloads and backend content rewrites.
+test("resolved approval is Approved when the gated tool executed (function_call_id result present)", () => {
+  const ccId = "cc-2";
+  const fcid = "call_exec_1";
+  const messages = [
+    { id: "u1", role: "user", content: "Apply a delta of 20." },
+    { id: "a1", role: "assistant", content: "", toolCalls: [
+      { id: "ad", type: "function", function: { name: "apply_delta", arguments: '{"delta":20}' } },
+    ] },
+    { id: "t-exec", role: "tool", toolCallId: fcid, content: JSON.stringify({ status: "ok", value: 140 }) },
+    { id: "a2", role: "assistant", content: "", toolCalls: [
+      { id: ccId, type: "function", function: { name: "confirm_changes", arguments: JSON.stringify({ function_name: "apply_delta", function_call_id: fcid, steps: [] }) } },
+    ] },
+    { id: "t-cc", role: "tool", toolCallId: ccId, content: "" }, // no telltale string
+  ];
+  const { el } = renderInto(messages);
+  const card = el.querySelector(".approval");
+  assert.ok(card.classList.contains("approved"), "executed gated tool => approved");
+  assert.match(card.textContent, /Approved/);
 });

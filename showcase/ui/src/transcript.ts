@@ -26,6 +26,10 @@ export interface TranscriptModel {
   errored: string | null;
   // Tool-call ids whose form widget is currently expanded (load-on-demand).
   expandedForms: Set<string>;
+  // The user's approve/reject decision per confirm_changes id. Authoritative: the
+  // backend may rewrite the tool-result content (e.g. to "Confirmed"/"Rejected"),
+  // so we trust what the user actually clicked over re-parsing the snapshot.
+  decisions: Map<string, boolean>;
   onApprove: (toolCallId: string, steps: any) => void;
   onReject: (toolCallId: string, steps: any) => void;
   onEditField: (key: string, value: string) => void;
@@ -62,6 +66,37 @@ function isResolved(messages: Msg[], toolCallId: string): boolean {
 function toolResult(messages: Msg[], toolCallId: string): any | null {
   const m = messages.find((x) => x.role === "tool" && x.toolCallId === toolCallId);
   return m ? safeParse(m.content) : null;
+}
+
+function rawToolContent(messages: Msg[], toolCallId: string): string | null {
+  const m = messages.find((x) => x.role === "tool" && x.toolCallId === toolCallId);
+  return m ? (m.content ?? "") : null;
+}
+
+// Was a resolved approval accepted? Layered, most-authoritative first:
+//  1. the user's recorded click (live session truth);
+//  2. did the GATED tool actually execute? confirm_changes carries the original
+//     function_call_id; a real tool result under that id proves approval
+//     (content-agnostic, survives reload + backend content rewrites);
+//  3. infer from the approval tool-result content ("Confirmed"/"Rejected").
+function wasAccepted(model: TranscriptModel, tc: ToolCall): boolean {
+  const local = model.decisions.get(tc.id);
+  if (local !== undefined) return local;
+
+  const parsed = safeParse(tc.function?.arguments);
+  const fcid = parsed.function_call_id;
+  if (fcid) {
+    const exec = model.messages.find((m) => m.role === "tool" && m.toolCallId === fcid);
+    if (exec && exec.content != null) {
+      const c = safeParse(exec.content);
+      if (c && typeof c === "object" && !("accepted" in c)) return true;
+    }
+  }
+
+  const raw = (rawToolContent(model.messages, tc.id) || "").toLowerCase();
+  if (raw.includes("reject")) return false;
+  if (raw.includes("confirm") || raw.includes("accepted")) return true;
+  return false;
 }
 
 // What is the user actually approving? `confirm_changes` carries the gated tool's
@@ -156,8 +191,7 @@ function renderApproval(el: HTMLElement, tc: ToolCall, model: TranscriptModel): 
   card.className = "approval";
 
   if (isResolved(model.messages, tc.id)) {
-    const res = toolResult(model.messages, tc.id);
-    const accepted = res?.accepted === true;
+    const accepted = wasAccepted(model, tc);
     card.classList.add(accepted ? "approved" : "rejected");
     card.innerHTML = `<div class="approval-head">${accepted ? "✓ Approved" : "✕ Rejected"} <span class="pill">HUMAN-IN-THE-LOOP</span></div>`;
     el.appendChild(card);

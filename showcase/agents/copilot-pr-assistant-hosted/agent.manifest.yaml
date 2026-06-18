@@ -1,0 +1,29 @@
+name: copilot-pr-assistant-hosted
+description: >
+  A GitHub Copilot SDK agent hosted on Azure AI Foundry via the Responses
+  protocol. It reviews code changes (read tools) and drafts a pull request. The
+  agent runs the Copilot SDK's bundled CLI in-process and does inference through
+  an APIM / Copilot BYOM gateway, demonstrating that a non-Agent-Framework agent
+  is hostable on Foundry by implementing the duck-typed SupportsAgentRun contract.
+metadata:
+  tags:
+    - GitHub Copilot SDK
+    - AI Agent Hosting
+    - Responses Protocol
+    - BYOM
+template:
+  name: copilot-pr-assistant-hosted
+  kind: hosted
+  protocols:
+    - protocol: responses
+      version: 1.0.0
+  environment_variables:
+    - name: APIM_GATEWAY
+      value: "{{APIM_GATEWAY}}"
+    - name: APIM_PATH_PREFIX
+      value: "{{APIM_PATH_PREFIX}}"
+    - name: APIM_KEY
+      value: "{{APIM_KEY}}"
+    - name: MODEL_NAME
+      value: "{{MODEL_NAME}}"
+resources: []

@@ -8,3 +8,6 @@ fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
 azure-identity>=1.19.0
 python-dotenv>=1.0.0
+# Optional — only needed when DOCUMENTINTELLIGENCE_ENDPOINT is set (read_document_markdown
+# falls back to a mock when unset, so `make smoke` runs without it).
+azure-ai-documentintelligence>=1.0.0

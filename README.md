@@ -4,9 +4,7 @@
 
 **Build a complete CopilotKit + AG-UI + Azure AI Foundry hosted-agent app from a single prompt — with human-in-the-loop approval built in.**
 
-A template gallery for agentic apps, in the spirit of
-[awesome-rayfin](https://github.com/microsoft/awesome-rayfin) — but for the
-Microsoft Agent Framework + CopilotKit + Foundry stack instead of Fabric.
+A template gallery for agentic apps using Microsoft Agent Framework + CopilotKit + Foundry stack instead of Fabric.
 
 </div>
 

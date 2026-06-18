@@ -5,9 +5,9 @@
 requiredVersions:
     extensions:
         azure.ai.agents: '>=0.1.0-preview'
-name: forgewright-app
+name: agentic-copilot-foundry
 services:
-    forgewright-app:
+    agentic-copilot-foundry:
         # Build context is the TEMPLATE ROOT (one level up) so the shared src/
         # agent is included alongside hosted/responses/.
         project: ..

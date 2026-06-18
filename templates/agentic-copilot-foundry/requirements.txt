@@ -1,0 +1,11 @@
+# agent-framework-core (NOT the agent-framework meta-package, which drags in
+# agent-framework-hyperlight → hyperlight-sandbox-backend-wasm and fails Foundry's
+# remote build). foundry-hosting itself depends on agent-framework-core>=1.8.1.
+agent-framework-core==1.8.1
+agent-framework-openai==1.8.1
+agent-framework-foundry-hosting
+# mcp is imported by agent_framework_foundry_hosting._responses (McpError) and is
+# NOT pulled transitively on the remote build — must be explicit.
+mcp>=1.24.0,<2
+azure-identity>=1.19.0
+python-dotenv>=1.0.0

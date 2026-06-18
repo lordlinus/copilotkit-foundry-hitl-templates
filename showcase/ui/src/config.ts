@@ -15,6 +15,12 @@ export const API_BASE = (window.SHOWCASE_API_BASE || fromEnv || "http://localhos
 export const REPO_URL = "https://github.com/lordlinus/forgewright";
 export const REPO_BRANCH = "main";
 
+export interface AgentTool {
+  name: string;
+  description: string;
+  consequential?: boolean; // true => HITL-gated (Approve/Reject before it runs)
+}
+
 export interface AgentInfo {
   id: string;
   title: string;
@@ -24,6 +30,7 @@ export interface AgentInfo {
   stack: string[];
   sourcePath: string;
   tryPrompts: string[];
+  tools?: AgentTool[];
 }
 
 export function agentEndpoint(id: string): string {

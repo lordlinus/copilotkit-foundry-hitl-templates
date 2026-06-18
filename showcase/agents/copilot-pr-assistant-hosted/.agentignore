@@ -1,0 +1,12 @@
+# Exclude from the code-deploy ZIP (gitignore syntax). Foundry remote_build
+# reinstalls requirements.txt, so local venvs / caches / the container image
+# must not be uploaded.
+.venv/
+__pycache__/
+*.pyc
+.azure/
+Dockerfile
+README.md
+node_modules/
+.env
+.env.*
