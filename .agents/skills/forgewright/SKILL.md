@@ -106,9 +106,11 @@ since all logic is server-side.
   so the gated tool **re-executes server-side**. `bridge_app.py` neutralises
   ag-ui's LOCAL approval interception so the decision reaches the agent.
 - **Why hand-rolled, not the native `add_agent_framework_fastapi_endpoint(FoundryAgent)`:**
-  verified live — the native FoundryAgent path resolves `confirm_changes` locally and
-  has no `mcp_approval_response` forwarding, so HITL **approve does NOT re-execute**
-  the hosted tool. The hand-rolled forwarder is the bridge's whole reason to exist.
+  re-verified live on the latest packages (matrix in `references/architecture.md`).
+  The native path needs `allow_preview=True` just to reach the hosted-agent endpoint,
+  and even then — with or without the ag-ui patches — HITL **approve does NOT
+  re-execute** the tool: the `FoundryAgent` client has no client-side
+  `mcp_approval_response`. The hand-rolled forwarder fills exactly that one gap.
 - **Local dev (`make local`/`make smoke`):** `azd ai agent run` runs the REAL agent
   (`ResponsesHostServer` + `FoundryChatClient`) on your machine, connected to your
   Foundry project's model; the bridge points at it in **DIRECT mode**
@@ -126,14 +128,15 @@ since all logic is server-side.
   (verified live: 100→125 deployed, 100→110 local). No mock client.
 
 ### Framework workarounds — minimal, re-check each upgrade
-`bridge_app.py` patches: (a) route HITL approvals to the hosted agent (not local);
-(b) split multi-tool snapshot messages (CopilotKit v1 renders only
-`toolCalls[0]`; `DISABLE_C9_SPLIT=1` on a v2 frontend). Offline in-process needs only
-the snapshot split — HITL and orphan-replay are native on ag-ui rc5.
+`bridge_app.py` patches (both proven load-bearing by `make smoke`): (a) route HITL
+approvals to the hosted agent (not local); (b) split multi-tool snapshot messages
+(CopilotKit v1 renders only `toolCalls[0]`; `DISABLE_C9_SPLIT=1` on a v2 frontend).
+Re-run the native-path matrix in `references/architecture.md` on each upgrade and
+delete a patch the moment the framework closes the gap.
 ### The 7 AG-UI patterns
-See `references/patterns-7.md`. Native in-process (offline): all 7. Deployed via the
-bridge: Agentic Chat, Backend Tool Rendering, HITL (forwarded). Shared/predictive
-state through the deployed bridge is roadmap.
+See `references/patterns-7.md`. Through the deployed/local hosted bridge: Agentic
+Chat, Backend Tool Rendering, HITL (forwarded). Shared/predictive state through the
+bridge is roadmap.
 
 ### HITL contract
 - A `@tool(approval_mode="always_require")` tool surfaces as a `confirm_changes`

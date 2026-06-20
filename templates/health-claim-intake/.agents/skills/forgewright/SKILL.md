@@ -13,7 +13,8 @@ UI with rich generative UI. The bridge (`backend/bridge_app.py` → `HostedProxy
 forwards each turn to the hosted agent over Responses, translates to AG-UI, and
 forwards `mcp_approval_response` on HITL approve so the gated tool **re-executes
 server-side**. (The native `add_agent_framework_fastapi_endpoint(FoundryAgent)` path
-can't — it resolves `confirm_changes` locally; verified live.) For local dev,
+can't: even with `allow_preview=True` it never sends `mcp_approval_response`, so
+approve doesn't re-execute — re-verified live, matrix in references/architecture.md.) For local dev,
 `azd ai agent run` runs the REAL agent on your machine (connected to your Foundry
 project) and `make smoke`/`make local` point the bridge at it (DIRECT mode), so smoke
 drives the SAME bridge code path as production — no mock.

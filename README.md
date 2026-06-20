@@ -42,12 +42,19 @@ server-side — plus `azd` to deploy the hosted agent.
      the SAME agent on your machine; the bridge points at it (DIRECT mode) — no mock.
 ```
 
-**Why a bridge?** You can't point a CopilotKit/AG-UI client at a deployed Foundry
-hosted agent — its endpoint speaks the OpenAI **Responses** protocol, not AG-UI.
-And the framework's *native* AG-UI adapter resolves the HITL `confirm_changes`
-**locally** and never forwards the approval, so the gated tool never re-runs
-(confirmed by live testing). The bridge is a small, focused forwarder that fixes
-exactly that — translate, and forward `mcp_approval_response`.
+**Why a bridge? (and why it's the *minimum*)** You can't point a CopilotKit/AG-UI
+client at a deployed Foundry hosted agent — its endpoint speaks the OpenAI
+**Responses** protocol, not AG-UI. We tested the framework's native path
+(`add_agent_framework_fastapi_endpoint(FoundryAgent(...))`) against a real hosted
+agent on the latest packages (agent-framework 1.9 / ag-ui rc5). It does a lot —
+streams text, renders tool cards, even *surfaces* the approval request — but it
+**cannot complete HITL**: on approve it never sends `mcp_approval_response` to the
+hosted agent (the client doesn't model that Responses item), so the gated tool
+never re-runs (state unchanged — verified). The bridge fills exactly that gap and
+nothing more: a thin forwarder (`HostedProxyAgent` + `hosted_client`) that calls
+the hosted-agent endpoint and forwards `mcp_approval_response`, plus two small
+ag-ui patches (HITL routing + multi-tool snapshot split) that `make smoke`
+proves are load-bearing. See `references/architecture.md` for the full test matrix.
 
 ## Quick start
 

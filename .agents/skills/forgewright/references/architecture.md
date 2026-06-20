@@ -43,6 +43,29 @@ as an `mcp_approval_response`, which re-executes the tool server-side.
   (deployed agents use Entra isolation → 400); and `build_hosted_agent` MUST use
   `FoundryChatClient` (Chat Completions 500s on hosted approve-resume).
 
+## Why the bridge is the MINIMUM (native-path test matrix)
+
+Is the hand-rolled bridge over-engineering? We tested every alternative against the
+real agent on the **latest** packages (agent-framework-core 1.9.0,
+agent-framework-foundry 1.8.2, agent-framework-ag-ui 1.0.0rc5). `make smoke` = 15
+assertions (read, HITL pause, approve re-executes, reject, C9, C10).
+
+| Configuration | Result |
+| --- | --- |
+| **Bridge (HostedProxyAgent + 2 patches)** | **15/15** ✓ |
+| Bridge, HITL approval routing patch removed | approve does NOT change state ✗ — patch REQUIRED |
+| Bridge, `DISABLE_C9_SPLIT=1` | C9 fails (snapshot lumps >1 tool_calls) ✗ — split REQUIRED |
+| Native `add_agent_framework_fastapi_endpoint(FoundryAgent(...))` | 400 "Hosted agents can only be called through the agent endpoint" ✗ |
+| Native + `allow_preview=True` | surfaces the approval, but **approve does NOT re-execute** (state unchanged); C9 fails ✗ |
+| Native + `allow_preview=True` + the 2 patches | **still** approve does NOT re-execute ✗ |
+
+**Conclusion:** the native `FoundryAgent` client has no client-side
+`mcp_approval_response` — it cannot complete hosted HITL no matter how it's
+configured. The bridge's only job is to fill that one framework gap (call the
+hosted-agent endpoint + forward the approval) plus two ag-ui patches `make smoke`
+proves are load-bearing. Nothing else is hand-rolled; re-run this matrix on each
+package bump and delete a patch the moment the framework closes the gap.
+
 ## Client choice (the load-bearing rule)
 
 - **Hosted agent (`build_hosted_agent`) → `FoundryChatClient` (Responses).** Required
