@@ -20,7 +20,7 @@ cd "$ROOT/frontend"
 npm run dev &
 FRONTEND_PID=$!
 
-cleanup() { kill "${FRONTEND_PID:-}" "${BRIDGE_PID:-}" "${AGENT_PID:-}" 2>/dev/null || true; }
+cleanup() { kill "${FRONTEND_PID:-}" 2>/dev/null || true; stop_agent_and_bridge 8088 8080; }
 trap cleanup EXIT INT TERM
 
 echo "──────────────────────────────────────────────"

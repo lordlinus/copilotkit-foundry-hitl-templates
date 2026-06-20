@@ -10,7 +10,7 @@ BPY="${BPY:-$ROOT/backend/.venv/bin/python}"
 # shellcheck source=/dev/null
 . "$ROOT/scripts/lib-agentrun.sh"
 
-cleanup() { kill "${BRIDGE_PID:-}" "${AGENT_PID:-}" 2>/dev/null || true; }
+cleanup() { stop_agent_and_bridge 8088 8080; }
 trap cleanup EXIT INT TERM
 
 start_agent_and_bridge "$ROOT" "$BPY" 8088 8080 || exit 1

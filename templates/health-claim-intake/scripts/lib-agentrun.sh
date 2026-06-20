@@ -7,6 +7,15 @@ start_agent_and_bridge() {
   local ROOT="$1" BPY="$2" AGENT_PORT="${3:-8088}" BRIDGE_PORT="${4:-8080}"
   local NAME; NAME="$(grep -E '^AGENT_NAME' "$ROOT/src/agent.py" | sed -E 's/.*"([^"]+)".*/\1/')"
 
+  # Fail fast if the agent port is already taken — otherwise `azd ai agent run`
+  # can't bind, /readiness answers from the STALE agent, and the bridge silently
+  # drives the WRONG agent (e.g. another template's). Refuse rather than mislead.
+  if curl -sf "http://127.0.0.1:$AGENT_PORT/readiness" >/dev/null 2>&1; then
+    echo "✗ :$AGENT_PORT is already serving an agent — refusing to start (would use the"
+    echo "  wrong agent). Stop it first:  fuser -k $AGENT_PORT/tcp   (or set AGENT_PORT)."
+    return 1
+  fi
+
   echo "▸ azd ai agent run (real agent, local :$AGENT_PORT) …"
   ( cd "$ROOT" && azd ai agent run --no-inspector --port "$AGENT_PORT" >/tmp/forge-agent.log 2>&1 ) &
   AGENT_PID=$!
@@ -27,4 +36,17 @@ start_agent_and_bridge() {
     sleep 0.5
   done
   curl -sf "http://127.0.0.1:$BRIDGE_PORT/healthz" >/dev/null || { echo "✗ bridge not ready"; return 1; }
+}
+
+# Stop the agent + bridge and FREE their ports. `azd ai agent run` spawns a
+# grandchild (azure-ai-agents-linux → python) that holds the port, so killing the
+# launcher PID is not enough — also free the ports so the next run doesn't silently
+# attach to a stale agent. Safe to call from a trap.
+stop_agent_and_bridge() {
+  local AGENT_PORT="${1:-8088}" BRIDGE_PORT="${2:-8080}"
+  kill "${BRIDGE_PID:-}" "${AGENT_PID:-}" 2>/dev/null || true
+  if command -v fuser >/dev/null 2>&1; then
+    fuser -k "${BRIDGE_PORT}/tcp" 2>/dev/null || true
+    fuser -k "${AGENT_PORT}/tcp" 2>/dev/null || true
+  fi
 }
