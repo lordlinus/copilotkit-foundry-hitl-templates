@@ -1,7 +1,13 @@
 "use client";
 
-import { useCopilotAction } from "@copilotkit/react-core";
-import { CopilotChat } from "@copilotkit/react-ui";
+import {
+  CopilotChat,
+  useHumanInTheLoop,
+  useRenderTool,
+} from "@copilotkit/react-core/v2";
+import { z } from "zod";
+
+const AGENT_NAME = "health_claim_intake";
 
 function asPayload(result: unknown): any {
   if (!result) return {};
@@ -33,17 +39,27 @@ function ClaimForm({ form }: { form: Record<string, any> }) {
 }
 
 export default function Chat() {
-  // ── THE HITL GATE ───────────────────────────────────────────────────────
-  // When a tool marked approval_mode="always_require" is called, the AG-UI
-  // runtime PAUSES and emits a synthetic `confirm_changes` tool call carrying
-  // the original function name + arguments + approval `steps`. CopilotKit
-  // renders THIS action and waits. We resolve it with { accepted, steps } —
-  // the shape the backend expects (its check is `"accepted" in parsed`).
-  // Nothing consequential (here: filing the claim) runs until the user approves.
-  useCopilotAction({
+  // -- THE HITL GATE (v2 useHumanInTheLoop) ---------------------------------
+  // A tool marked approval_mode="always_require" (submit_claim) surfaces as a
+  // synthetic `confirm_changes` tool call. Resolve with { accepted, steps }.
+  // Nothing consequential (filing the claim) runs until Approve.
+  useHumanInTheLoop({
+    agentId: AGENT_NAME,
     name: "confirm_changes",
-    available: "disabled",
-    renderAndWaitForResponse: ({ status, args, respond }) => {
+    description: "Approve or reject filing the claim before it is submitted.",
+    parameters: z.object({
+      function_name: z.string().optional(),
+      function_arguments: z.any().optional(),
+      steps: z
+        .array(
+          z.object({
+            description: z.string(),
+            status: z.enum(["enabled", "disabled", "executing"]),
+          }),
+        )
+        .optional(),
+    }),
+    render: ({ status, args, respond }: any) => {
       const fnName = String(args?.function_name ?? "submit_claim");
       let fnArgs: any = args?.function_arguments ?? {};
       if (typeof fnArgs === "string") {
@@ -56,13 +72,13 @@ export default function Chat() {
       const steps = args?.steps ?? [{ description: `Execute ${fnName}`, status: "enabled" }];
 
       if (status === "complete") {
-        return <div className="card resolved">✓ Decision recorded</div>;
+        return <div className="card resolved">Decision recorded</div>;
       }
       const isSubmit = fnName === "submit_claim";
       return (
         <div className="approval">
           <div className="approval-head">
-            ✋ Approval required <span className="pill">HUMAN-IN-THE-LOOP</span>
+            Approval required <span className="pill">HUMAN-IN-THE-LOOP</span>
           </div>
           <div className="approval-body">
             <div className="fn">{fnName}</div>
@@ -95,32 +111,32 @@ export default function Chat() {
     },
   });
 
-  // ── Result card for the consequential tool (post-execution) ───────────────
-  useCopilotAction({
+  // -- Result card for the consequential tool (post-execution) --------------
+  useRenderTool({
     name: "submit_claim",
-    available: "disabled",
-    render: ({ result, status }) => {
+    parameters: z.object({}),
+    render: ({ result, status }: any) => {
       if (status !== "complete") return <></>;
       const p = asPayload(result);
       if (p.status !== "ok") return <></>;
       return (
         <div className="card resolved">
-          ✓ Claim filed · reference <strong>{p.reference}</strong>
+          Claim filed - reference <strong>{p.reference}</strong>
         </div>
       );
     },
   });
 
-  // ── Intake documents ──────────────────────────────────────────────────────
-  useCopilotAction({
+  // -- Intake documents -----------------------------------------------------
+  useRenderTool({
     name: "list_documents",
-    available: "disabled",
-    render: ({ result }) => {
+    parameters: z.object({}),
+    render: ({ result }: any) => {
       const p = asPayload(result);
       if (!p.documents) return <></>;
       return (
         <div className="card">
-          <div className="fn">Intake documents · {p.count}</div>
+          <div className="fn">Intake documents - {p.count}</div>
           <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
             {p.documents.map((d: any) => (
               <li key={d.id}>
@@ -133,11 +149,11 @@ export default function Chat() {
     },
   });
 
-  // ── Auto-filled claim form ────────────────────────────────────────────────
-  useCopilotAction({
+  // -- Auto-filled claim form -----------------------------------------------
+  useRenderTool({
     name: "extract_claim_form",
-    available: "disabled",
-    render: ({ result }) => {
+    parameters: z.object({}),
+    render: ({ result }: any) => {
       const p = asPayload(result);
       if (!p.form || !Object.keys(p.form).length) return <></>;
       return (
@@ -149,34 +165,34 @@ export default function Chat() {
     },
   });
 
-  // ── Field edit ────────────────────────────────────────────────────────────
-  useCopilotAction({
+  // -- Field edit -----------------------------------------------------------
+  useRenderTool({
     name: "update_claim_field",
-    available: "disabled",
-    render: ({ result, status }) => {
+    parameters: z.object({ field: z.string().optional(), value: z.string().optional() }),
+    render: ({ result, status }: any) => {
       if (status !== "complete") return <></>;
       const p = asPayload(result);
       if (!p.field) return <></>;
       return (
         <div className="card resolved">
-          ✎ Updated <strong>{p.field}</strong> → {String(p.value)}
+          Updated <strong>{p.field}</strong> - {String(p.value)}
         </div>
       );
     },
   });
 
-  // ── Read-only claim snapshot ──────────────────────────────────────────────
-  useCopilotAction({
+  // -- Read-only claim snapshot ---------------------------------------------
+  useRenderTool({
     name: "get_claim",
-    available: "disabled",
-    render: ({ result }) => {
+    parameters: z.object({}),
+    render: ({ result }: any) => {
       const p = asPayload(result);
       if (!p.status) return <></>;
       return (
         <div className="card">
           <div className="fn">
-            Claim · {p.status}
-            {p.reference ? ` · ${p.reference}` : ""}
+            Claim - {p.status}
+            {p.reference ? ` - ${p.reference}` : ""}
           </div>
           {p.form && Object.keys(p.form).length ? <ClaimForm form={p.form} /> : null}
         </div>
@@ -184,16 +200,5 @@ export default function Chat() {
     },
   });
 
-  return (
-    <CopilotChat
-      className="chat"
-      labels={{
-        title: "Claim intake assistant",
-        initial:
-          "Hi! I can intake your claim documents and fill out the form. Try: " +
-          "“list the documents”, “extract the claim form”, “change the billed amount to 1450”, " +
-          "then “submit the claim” — submission pauses for your approval first.",
-      }}
-    />
-  );
+  return <CopilotChat agentId={AGENT_NAME} className="chat" />;
 }

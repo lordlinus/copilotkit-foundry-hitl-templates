@@ -16,14 +16,14 @@ from dotenv import load_dotenv
 
 from agent_framework_foundry_hosting import ResponsesHostServer
 
-from agent import build_agent  # noqa: E402  (after sys.path insert)
+from agent import build_hosted_agent  # noqa: E402  (after sys.path insert)
 
 load_dotenv(override=False)
 logging.basicConfig(level=logging.INFO)
 
 
 def main() -> None:
-    ResponsesHostServer(build_agent()).run()
+    ResponsesHostServer(build_hosted_agent()).run()
 
 
 if __name__ == "__main__":

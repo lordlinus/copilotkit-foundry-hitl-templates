@@ -8,6 +8,7 @@ export default function Page() {
     <CopilotKit
       runtimeUrl="/api/copilotkit"
       agent="forgewright_app"
+      showDevConsole={false}
       // The route uses the multi-route hono handler (createCopilotHonoHandler),
       // so info/threads/agent-run are dispatched by URL path + HTTP method.
       // CopilotKit's default `useSingleEndpoint: true` POSTs everything to the

@@ -11,7 +11,7 @@ import { NextRequest } from "next/server";
 // MUST match AGENT_NAME in src/agent.py and the CopilotKit agent prop in page.tsx.
 const AGENT_NAME = "forgewright_app";
 
-// The AG-UI backend (FastAPI + SSE) served by backend/ag_ui_app.py.
+// The AG-UI backend (FastAPI + SSE) served by backend/bridge_app.py.
 const backendUrl = process.env.AG_UI_BACKEND_URL ?? "http://localhost:8080/";
 const apiKey = process.env.AG_UI_API_KEY;
 

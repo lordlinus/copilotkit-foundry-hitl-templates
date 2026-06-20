@@ -10,18 +10,16 @@ Each row is a real failure mode encoded as a check in `scripts/verify.sh` or
 | Approve a tool → `RUN_ERROR` 400 **"No tool output found for function call"** | Using the Responses-API `OpenAIChatClient` | Use `OpenAIChatCompletionClient` (Chat Completions). `verify.sh` fails if it sees `OpenAIChatClient`. |
 | Approval card never appears | `confirm_changes` action not registered, or not `available:"disabled"` with `renderAndWaitForResponse` | Keep the `confirm_changes` `useCopilotAction` from the template verbatim. |
 | Clicking Approve does nothing / tool never runs | Resolving with `{ approved }` | Resolve with `{ accepted: boolean, steps }`. Backend detection is `"accepted" in parsed`. |
-| Approve works once, next message 400s with orphaned `call_…` | Stale `{accepted:…}` payload re-sent; executed result never journaled | Patch 2c (journal result + scrub payload) + Patch 3 (orphan repair). Both ship in `ag_ui_app.py`. |
+| Approve works once, next message 400s with orphaned `call_…` | (pre-rc5) stale approval payload re-sent | Handled NATIVELY on agent-framework-ag-ui rc5 — do not re-add the old hand-rolled patches. |
 | Consequential tool runs WITHOUT asking | Tool missing `approval_mode="always_require"` | Decorate the consequential tool. `verify.sh` requires at least one. |
 
 ## AG-UI rendering
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| Only the first generative card shows when a turn made several tool calls | CopilotKit renders only `message.toolCalls[0]` | Patch 2 splits multi-tool snapshot assistant messages; `smoke.py` C9 asserts no assistant snapshot msg has >1 toolCalls. |
-| Approval card appears late (only after run ends) | live `confirm_changes` shares the parent message id | Patch 2b assigns a fresh `parent_message_id` to the live `confirm_changes` start event. |
-| `INCOMPLETE_STREAM` "No active text message found" | someone also overwrote `flow.message_id` | Don't. Patch 2b only rewrites the event's `parent_message_id`. |
-| Replayed history 400s on an interrupted prior turn | assistant function_call with no result | Patch 1+3 (`normalize_agui_input_messages`) inject a synthetic result, skipping calls pending approval. `smoke.py` C10 asserts this. |
-| Server tool surfaces as a client/declaration-only call and never executes (mock) | mock client is a plain `BaseChatClient` | Mock must subclass `FunctionInvocationLayer, BaseChatClient` (the Agent skips tool execution otherwise). |
+| HITL approve doesn't re-execute the tool server-side (state unchanged after approve) | ag-ui resolves `confirm_changes` **locally** before the proxy sees it | `bridge_app.py` neutralises `_is_confirm_changes_response` + `_resolve_approval_responses`, so the decision reaches `HostedProxyAgent`, which forwards `mcp_approval_response` to the hosted agent. **Proven load-bearing: disabling it → approve doesn't change state.** |
+| Approval/tool card vanishes at RUN_FINISHED when a turn made several tool calls | ag-ui's snapshot builder lumps >1 tool_calls into one assistant message; CopilotKit **v1** renders only `toolCalls[0]` | `bridge_app.py` splits multi-tool snapshot messages (`_build_messages_snapshot`); `smoke.py` C9 guards it. **Proven load-bearing: `DISABLE_C9_SPLIT=1` fails C9.** (v2 renders all tool calls, but the split keeps the snapshot correct for both frontends.) |
+| Replayed history 400s / orphaned tool call (C10) | raw AG-UI history replayed to the hosted agent | the proxy does **not** replay raw history — `_find_approval_decision` / `_latest_user_text` derive the turn input (latest user text, or an `mcp_approval_response`). `smoke.py` C10 asserts no error. No `normalize_*` patch needed. |
 
 ## CopilotKit bridge
 
@@ -40,7 +38,7 @@ Each row is a real failure mode encoded as a check in `scripts/verify.sh` or
 | --- | --- | --- |
 | 401 "audience is incorrect" | default `cognitiveservices.azure.com` scope on the project path | request the `https://ai.azure.com/.default` audience. |
 | 403 `workspaces/agents/action` | `az` logged into the wrong tenant for the project | `az login --tenant <foundry-tenant>` (or set the project's tenant). |
-| Can't run without Azure | testing offline | `LLM_MODE=mock` (what `make smoke` uses). |
+| Run the agent locally for dev | no deployed agent yet | `azd ai agent run` runs the REAL agent on your machine (what `make local`/`make smoke` use, via the bridge's DIRECT mode); needs `az login` + a provisioned project (`make up` once). |
 
 ## Containers / azd
 
@@ -49,3 +47,14 @@ Each row is a real failure mode encoded as a check in `scripts/verify.sh` or
 | `az acr build` fails `toomanyrequests` | Docker Hub base image | use `mcr.microsoft.com/devcontainers/...` base images. |
 | azd deploys the helloworld placeholder | ran `azd provision` only | run `make up` (= `azd up` = provision + deploy). |
 | hosted image missing `src/agent.py` | build context too narrow | `hosted/azure.yaml` sets `context: ..` (template root). |
+
+## Bridge (the framework-native AG-UI endpoint)
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| Approval card vanishes at RUN_FINISHED | multi-tool snapshot; CopilotKit v1 renders only `toolCalls[0]` | keep the snapshot-split in `bridge_app.py`; `make smoke` C9 guards it. |
+| HITL approve does nothing / state doesn't change | ag-ui resolved the approval locally (the routing patch was removed/disabled) | the hosted bridge needs **two** patches — HITL approval routing **and** the snapshot split — both proven load-bearing on rc5 (disabling either fails smoke). Keep both. |
+| `useAgent().state` stays empty | `state_schema`/`predict_state_config` not passed to the endpoint, or no tool writes the state key | set `AGENT_STATE_SCHEMA`/`AGENT_PREDICT_STATE` in `src/agent.py` and write the key from a tool. |
+| Deployed bridge can't reach the agent | `FOUNDRY_PROJECT_ENDPOINT` / `HOSTED_AGENT_NAME` unset | set both; the bridge (`hosted_client`) reaches the deployed agent keyless. |
+| Python `@tool` didn't run "in Foundry" | FoundryAgent runs Python `@tool` callables CLIENT-SIDE; only Foundry-native tools run server-side | expected — define server-side tools on the deployed agent; keep `@tool`s for client-side/HITL. |
+| UI 500 mid-run on a long silent tool | a gateway dropped the idle SSE | keep `SSEKeepAliveMiddleware` (`: ping` ~10s). |

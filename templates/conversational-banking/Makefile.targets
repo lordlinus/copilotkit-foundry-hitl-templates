@@ -12,7 +12,7 @@ help:
 	@echo "  make preflight  check toolchain + install backend/frontend deps"
 	@echo "  make local      run backend (AG-UI/SSE :8080) + frontend (Next.js :3000)"
 	@echo "  make verify     read-only structural checks (no network)"
-	@echo "  make smoke      offline end-to-end HITL test (LLM_MODE=mock, no Azure)"
+	@echo "  make smoke      end-to-end HITL test against the REAL agent (azd ai agent run)"
 	@echo "  make up         deploy hosted Foundry agent via azd (needs az login)"
 	@echo "  make clean      remove venvs / node_modules / .next"
 

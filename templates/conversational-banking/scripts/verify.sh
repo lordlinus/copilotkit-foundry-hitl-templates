@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # verify.sh — read-only structural checks for a forgewright app.
 #
-# Proves the load-bearing wiring is intact: the four AG-UI resilience patches,
-# Chat Completions (not Responses), the CopilotKit multi-route bridge, the HITL
+# Proves the load-bearing wiring is intact: the two AG-UI resilience patches (HITL
+# approval routing + multi-tool snapshot split, both proven load-bearing),
+# FoundryChatClient (Responses), the CopilotKit multi-route bridge, the HITL
 # confirm_changes contract, name consistency, and the hosted/azd descriptors.
 # Read-only (greps + path tests). For behavior, use scripts/smoke.py.
 set -euo pipefail
@@ -15,7 +16,7 @@ cd "$ROOT"
 
 # ── Layout ────────────────────────────────────────────────────────────────
 [ -f src/agent.py ]                && pass "src/agent.py present"        || fail "src/agent.py missing"
-[ -f backend/ag_ui_app.py ]        && pass "backend/ag_ui_app.py present" || fail "backend/ag_ui_app.py missing"
+[ -f backend/bridge_app.py ]       && pass "backend/bridge_app.py present (the AG-UI bridge)" || fail "backend/bridge_app.py missing"
 [ -f hosted/azure.yaml ]           && pass "hosted/azure.yaml present"   || fail "hosted/azure.yaml missing"
 [ -f hosted/responses/main.py ]    && pass "hosted/responses/main.py present" || fail "hosted/responses/main.py missing"
 [ -f hosted/responses/agent.yaml ] && pass "hosted/responses/agent.yaml present" || fail "hosted/responses/agent.yaml missing"
@@ -42,27 +43,55 @@ else
   fail "hosted name DRIFT: azure.yaml='$hosted_azure_name' agent.yaml='$hosted_agent_yaml_name' manifest='$hosted_manifest_name'"
 fi
 
-# ── Chat Completions, NOT Responses (HITL re-exec correctness) ──────────────
-grep -q 'OpenAIChatCompletionClient' src/agent.py \
-  && pass "agent.py uses OpenAIChatCompletionClient (Chat Completions)" \
-  || fail "agent.py NOT using OpenAIChatCompletionClient — HITL approve-resume will 400 'No tool output found'"
-if grep -qE 'from agent_framework_openai import.*\bOpenAIChatClient\b' src/agent.py; then
-  fail "agent.py imports the Responses-API OpenAIChatClient — HITL approve-resume will 400. Use OpenAIChatCompletionClient."
-fi
-
-# ── Keyless Foundry path present ────────────────────────────────────────────
-grep -q 'ai.azure.com/.default' src/agent.py \
-  && pass "agent.py requests the ai.azure.com audience (keyless Foundry)" \
-  || warn "agent.py does not set the ai.azure.com audience — project-scoped token may 401"
-
-# ── The four AG-UI resilience patches ───────────────────────────────────────
-patches_missing=0
-grep -q 'convert_agui_tools_to_agent_framework' backend/ag_ui_app.py || { fail "AG-UI Patch 1 (tool-name collisions) MISSING"; patches_missing=1; }
-grep -q '_build_messages_snapshot'  backend/ag_ui_app.py || { fail "AG-UI Patch 2 (split multi-tool snapshot) MISSING"; patches_missing=1; }
-grep -q '_emit_approval_request' backend/ag_ui_app.py || { fail "AG-UI Patch 2b (fresh parent_message_id) MISSING"; patches_missing=1; }
-grep -q '_make_approval_tool_result_events\|_clean_resolved_approvals_from_snapshot' backend/ag_ui_app.py || { fail "AG-UI Patch 2c (persist HITL result) MISSING"; patches_missing=1; }
-grep -q 'normalize_agui_input_messages' backend/ag_ui_app.py || { fail "AG-UI Patch 3 (orphan repair) MISSING"; patches_missing=1; }
-[ "$patches_missing" -eq 0 ] && pass "all four AG-UI resilience patches present"
+# ── The bridge: HostedProxyAgent → hosted agent (azd ai agent run locally) ──
+grep -q 'add_agent_framework_fastapi_endpoint' backend/bridge_app.py \
+  && pass "bridge mounts add_agent_framework_fastapi_endpoint (AG-UI endpoint)" \
+  || fail "bridge_app does NOT use add_agent_framework_fastapi_endpoint"
+grep -q 'HostedProxyAgent' backend/bridge_app.py && [ -f backend/hosted_proxy.py ] \
+  && pass "bridge = HostedProxyAgent (forwards turns to the hosted agent)" \
+  || fail "bridge_app/hosted_proxy.py missing HostedProxyAgent — bridge can't reach the hosted agent"
+grep -q 'mcp_approval_response' backend/hosted_proxy.py \
+  && pass "hosted_proxy forwards HITL approvals as mcp_approval_response (re-executes server-side)" \
+  || fail "hosted_proxy does NOT send mcp_approval_response — HITL approve won't re-execute the tool"
+grep -q '_is_confirm_changes_response' backend/bridge_app.py && grep -q '_resolve_approval_responses' backend/bridge_app.py \
+  && pass "bridge neutralises ag-ui local approval interception (routes HITL to the agent)" \
+  || fail "bridge_app does NOT patch _is_confirm_changes_response/_resolve_approval_responses — approvals swallowed locally"
+grep -q 'converse_stream' backend/hosted_client.py \
+  && pass "hosted_client streams the hosted agent's Responses (conversation + session)" \
+  || fail "hosted_client missing converse_stream"
+grep -q 'HOSTED_AGENT_DIRECT_URL' backend/hosted_client.py \
+  && pass "hosted_client supports DIRECT mode (local 'azd ai agent run' via HOSTED_AGENT_DIRECT_URL)" \
+  || fail "hosted_client missing DIRECT mode — make local/smoke can't drive a local agent"
+grep -q 'startupCommand' azure.yaml \
+  && pass "azure.yaml has startupCommand (azd ai agent run runs the agent locally)" \
+  || warn "azure.yaml has no startupCommand — azd ai agent run will auto-detect"
+grep -q 'azd ai agent run' scripts/lib-agentrun.sh 2>/dev/null \
+  && pass "make local/smoke run the REAL agent locally via azd ai agent run (no mock)" \
+  || fail "scripts/lib-agentrun.sh missing — make local/smoke can't start the local agent"
+! ls src/mock_client.py backend/mock_hosted.py >/dev/null 2>&1 \
+  && pass "no mock client (the real agent runs locally via azd ai agent run)" \
+  || warn "stale mock files present — remove them; azd ai agent run replaces the mock"
+grep -q 'def build_hosted_agent' src/agent.py \
+  && pass "agent.py defines build_hosted_agent() (the single brain)" \
+  || fail "agent.py missing build_hosted_agent()"
+grep -q 'FoundryChatClient' src/agent.py \
+  && pass "build_hosted_agent uses FoundryChatClient (Responses) — HITL approve-resume re-executes" \
+  || fail "build_hosted_agent NOT using FoundryChatClient — hosted HITL approve-resume breaks"
+grep -q 'build_hosted_agent' hosted/responses/main.py && grep -q 'build_hosted_agent' app.py \
+  && pass "hosted entrypoints (app.py + hosted/responses/main.py) serve build_hosted_agent" \
+  || fail "hosted entrypoints do NOT serve build_hosted_agent"
+grep -q 'SSEKeepAliveMiddleware' backend/bridge_app.py \
+  && pass "bridge has SSEKeepAliveMiddleware (long silent server-side tools don't drop the SSE)" \
+  || warn "bridge_app has no SSE keepalive"
+! grep -qE 'agent-framework-(foundry|openai)\b' backend/requirements.txt \
+  && pass "deployed bridge image deps are lean (no foundry/openai — bridge runs no model)" \
+  || warn "bridge image carries foundry/openai deps it doesn't need (bridge runs no model)"
+grep -qE 'httpx==' backend/requirements.txt \
+  && pass "bridge requirements pin httpx (hosted_client; prerelease pulls httpx 1.0.dev)" \
+  || warn "httpx not pinned — hosted_client may break on prerelease resolution"
+grep -q 'bridge_app:app' backend/Dockerfile \
+  && pass "backend Dockerfile deploys the bridge (bridge_app:app)" \
+  || fail "backend Dockerfile does NOT deploy bridge_app:app"
 
 # ── CopilotKit bridge: five required choices ────────────────────────────────
 route="frontend/app/api/copilotkit/[[...slug]]/route.ts"
@@ -76,13 +105,13 @@ done
 grep -rq --exclude-dir=node_modules --exclude-dir=.next 'useSingleEndpoint={false}' frontend/ && pass "<CopilotKit useSingleEndpoint={false}> set" \
   || fail "<CopilotKit useSingleEndpoint={false}> NOT set — Threads/Info will 404"
 
-# ── HITL confirm_changes contract ───────────────────────────────────────────
-grep -rq --exclude-dir=node_modules --exclude-dir=.next 'name:[[:space:]]*"confirm_changes"' frontend/ && pass "confirm_changes action wired" \
-  || fail "no confirm_changes useCopilotAction — approval card never renders"
-grep -rq --exclude-dir=node_modules --exclude-dir=.next 'renderAndWaitForResponse' frontend/ && pass "renderAndWaitForResponse present" \
-  || fail "renderAndWaitForResponse NOT used on confirm_changes"
-grep -rq --exclude-dir=node_modules --exclude-dir=.next 'available:[[:space:]]*"disabled"' frontend/ && pass 'confirm_changes is available:"disabled"' \
-  || warn 'confirm_changes SHOULD be available:"disabled"'
+# ── CopilotKit v2 hooks + HITL confirm_changes contract ─────────────────────
+grep -rq --exclude-dir=node_modules --exclude-dir=.next '@copilotkit/react-core/v2' frontend/ && pass "frontend uses CopilotKit v2 hooks (@copilotkit/react-core/v2)" \
+  || fail "frontend not on @copilotkit/react-core/v2 — migrate to v2 hooks (useAgent/useFrontendTool/useRenderTool/useHumanInTheLoop)"
+grep -rq --exclude-dir=node_modules --exclude-dir=.next 'useHumanInTheLoop' frontend/ && pass "useHumanInTheLoop wired (v2 HITL)" \
+  || fail "no useHumanInTheLoop — v2 HITL approval card never renders"
+grep -rq --exclude-dir=node_modules --exclude-dir=.next 'name:[[:space:]]*"confirm_changes"' frontend/ && pass "confirm_changes HITL action wired" \
+  || fail "no confirm_changes useHumanInTheLoop — approval card never renders"
 grep -rq --exclude-dir=node_modules --exclude-dir=.next '{ accepted' frontend/ && pass "approval response uses {accepted, steps} shape" \
   || fail "approval payload not {accepted, ...} — backend check is \`\"accepted\" in parsed\`"
 

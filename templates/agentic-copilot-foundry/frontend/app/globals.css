@@ -141,3 +141,12 @@ body {
   color: var(--no);
   border: 1px solid var(--no);
 }
+
+.state-banner {
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  background: rgba(99, 102, 241, 0.12);
+  color: #4338ca;
+}

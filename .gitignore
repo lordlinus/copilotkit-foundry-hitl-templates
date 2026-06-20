@@ -34,4 +34,7 @@ screenshots/
 playwright-report/
 test-results/
 **/.copilot-home/
-**/spark-ui
+**/spark-ui/
+
+# Vendored third-party reference source (research scratch; not published)
+reference/

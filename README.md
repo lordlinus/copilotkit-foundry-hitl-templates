@@ -2,9 +2,9 @@
 
 # ⚒︎ forgewright
 
-**Build a complete CopilotKit + AG-UI + Azure AI Foundry hosted-agent app from a single prompt — with human-in-the-loop approval built in.**
+**Build a complete CopilotKit + AG-UI + Azure AI Foundry hosted-agent app — with human-in-the-loop approval that actually re-executes server-side.**
 
-A template gallery for agentic apps using Microsoft Agent Framework + CopilotKit + Foundry stack instead of Fabric.
+A template gallery for agentic apps on the **Microsoft Agent Framework + CopilotKit + Azure AI Foundry** stack.
 
 </div>
 
@@ -20,56 +20,77 @@ forgewright is a **template gallery + agent skill**. Point a coding agent
 
 The agent reads `AGENTS.md` → loads `.agents/skills/forgewright/SKILL.md` →
 scaffolds the canonical template → customizes the agent's tools and the chat UI →
-and proves it with `make verify` + `make smoke` (offline, no Azure). You get a
-running Next.js + CopilotKit UI over a FastAPI/AG-UI backend hosting one
-Microsoft Agent Framework agent, connected **keyless** to Azure AI Foundry, with
-**native human-in-the-loop approval** on every consequential tool — and a
-one-command `azd up` to publish it as a Foundry **hosted agent**.
+and proves it with `make verify` + `make smoke` (the bridge against the REAL agent
+run locally via `azd ai agent run`). You get a
+**Next.js + CopilotKit v2** UI over an **AG-UI bridge** to an **Azure AI Foundry
+HOSTED agent** that runs all tools, history, and **human-in-the-loop approval**
+server-side — plus `azd` to deploy the hosted agent.
+
+## Architecture
 
 ```
- Next.js + CopilotKit ──SSE──▶ FastAPI + AG-UI ──▶ MAF agent ──▶ Azure AI Foundry
-   confirm_changes HITL card     4 resilience patches   approval_mode="always_require"
-                                                          │
-                                                  azd up  ▼  Foundry hosted agent (Responses)
+ Browser — Next.js + CopilotKit v2            Foundry HOSTED agent = the BRAIN
+   useAgent / useRenderTool /                   build_hosted_agent(): FoundryChatClient
+   useHumanInTheLoop                            ALL @tools + HITL + history (server-side)
+   route.ts (CopilotSseRuntime + HttpAgent)            ▲ Responses (stream) +
+        │  AG-UI / SSE                                 │ mcp_approval_response
+        ▼                                              │
+   BRIDGE  (backend/bridge_app.py)                     │
+     HostedProxyAgent → forwards each turn, translates Responses → AG-UI
+     (text, tool cards, confirm_changes), and forwards the HITL decision so
+     the gated tool RE-EXECUTES server-side. Local dev: `azd ai agent run` runs
+     the SAME agent on your machine; the bridge points at it (DIRECT mode) — no mock.
 ```
+
+**Why a bridge?** You can't point a CopilotKit/AG-UI client at a deployed Foundry
+hosted agent — its endpoint speaks the OpenAI **Responses** protocol, not AG-UI.
+And the framework's *native* AG-UI adapter resolves the HITL `confirm_changes`
+**locally** and never forwards the approval, so the gated tool never re-runs
+(confirmed by live testing). The bridge is a small, focused forwarder that fixes
+exactly that — translate, and forward `mcp_approval_response`.
 
 ## Quick start
 
 ```bash
-# From this repo, scaffold an app from the canonical template:
+# Scaffold a runnable app from the canonical template:
 scripts/new-app.sh my-app ~/projects
 
 cd ~/projects/my-app
 make verify      # structural checks (no network)
-make smoke       # offline end-to-end HITL test — read works, action PAUSES,
-                 # approve executes, reject doesn't (LLM_MODE=mock, no Azure)
-make local       # dev loop: backend :8080 + frontend :3000
-make up          # deploy the hosted Foundry agent via azd
+make smoke       # end-to-end HITL — read works, action PAUSES, approve executes,
+                 # reject doesn't. Runs the REAL agent locally via `azd ai agent run`
+                 # (needs `az login` + a provisioned project — see `make up`)
+make local       # dev loop: REAL agent (azd ai agent run) + bridge :8080 + frontend :3000
+make up          # azd → deploy the Foundry hosted agent
 ```
 
-Then edit `src/agent.py` (tools + instructions) and
-`frontend/components/Chat.tsx` (render cards) to fit your domain. Keep the four
-AG-UI resilience patches, the CopilotKit bridge, and the HITL contract as
+Then edit `src/agent.py` (tools + instructions) and `frontend/components/` (v2
+render cards). Keep the bridge, `build_hosted_agent()`, and the HITL contract as
 shipped — see `.agents/skills/forgewright/SKILL.md`.
 
-## Why these choices
+## Why these choices (validated live)
 
-- **Keyless Foundry, Chat Completions (not Responses)** — HITL approve-resume
-  400s on the Responses API; the template uses `OpenAIChatCompletionClient`
-  against `{FOUNDRY_PROJECT_ENDPOINT}/openai/v1` with `DefaultAzureCredential`.
-- **Four AG-UI resilience patches** — so generative cards survive snapshots,
-  approval cards render immediately, and replayed history never orphans a tool
-  call. All baked in and verified.
-- **Offline smoke** — `LLM_MODE=mock` runs the *entire* SSE + HITL path with no
-  model and no Azure, so `make smoke` is CI-able and proof, not faith.
+- **Foundry hosted agent uses `FoundryChatClient` (Responses).** This is what
+  makes HITL approve **re-execute** the gated tool server-side
+  (`mcp_approval_request` → `mcp_approval_response`). Verified live end-to-end
+  (approve mutates state; reject doesn't).
+- **The bridge forwards the approval.** The native
+  `add_agent_framework_fastapi_endpoint(FoundryAgent(…))` path can't — it resolves
+  `confirm_changes` locally. `HostedProxyAgent` routes the
+  decision to the hosted agent.
+- **Same agent locally and deployed.** `azd ai agent run` runs the REAL hosted
+  agent (`FoundryChatClient`, Responses) on your machine, connected to your Foundry
+  project's model; `make smoke` points the bridge at it (DIRECT mode), so the whole
+  SSE + HITL path is exercised against the real agent — no mock.
+- **CopilotKit v2** hooks (`useAgent`, `useRenderTool`, `useHumanInTheLoop`) for
+  chat, tool-render cards, and the approval gate.
 
 ## Live showcase
 
-[`showcase/`](showcase/) is a self-contained **portfolio demo**: a tiny static
-gallery (GitHub Pages) that talks over **AG-UI/SSE** to **one always-on Container
-App** fronting every template agent — click *Try it* to chat in your browser,
-click *View source* to land on the template here. It runs the templates as-is
-(no forks) and never touches `templates/`. See [`showcase/README.md`](showcase/README.md).
+[`showcase/`](showcase/) is a self-contained **portfolio demo**: a static gallery
+(GitHub Pages) that talks over **AG-UI/SSE** to an always-on Container App
+fronting the template agents — *Try it* to chat in your browser, *View source* to
+land on the template here. See [`showcase/README.md`](showcase/README.md).
 
 ## Templates
 
@@ -87,7 +108,7 @@ click *View source* to land on the template here. It runs the templates as-is
 .agents/skills/forgewright/   the single-prompt build skill (SKILL.md + references/)
 AGENTS.md                     how a coding agent builds an app from one prompt
 .mcp.json                     Microsoft Learn MCP (Foundry + Agent Framework docs)
-templates/<name>/             each template: a complete, runnable app + manifest.json
+templates/<name>/             each template: bridge + hosted agent + CopilotKit v2 UI + manifest.json
 scripts/                      new-app.sh, new-template.sh, generate-manifest.mjs
 docs/                         template guidelines + the single-prompt workflow
 forgewright-template.yml      generated gallery manifest (do not hand-edit)
@@ -103,6 +124,17 @@ make check                         verify generated manifests are in sync
 make list                          list templates
 make verify-template               run the canonical template's structural checks
 ```
+
+## How it's proven
+
+- `make verify` — structural: the bridge mounts `HostedProxyAgent`, forwards
+  `mcp_approval_response`, `build_hosted_agent` uses `FoundryChatClient`, names are
+  consistent, MCR base images.
+- `make smoke` — end-to-end against the REAL agent run locally via `azd ai agent
+  run`: read works, the consequential prompt PAUSES, approve executes, reject doesn't,
+  snapshot/replay OK.
+- **Live** — deploy with `azd`, run the bridge against the hosted agent, and confirm
+  HITL approve re-executes (state changes) and reject doesn't, in a real browser.
 
 ## License
 

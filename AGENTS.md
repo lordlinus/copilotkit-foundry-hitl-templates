@@ -17,12 +17,14 @@ that can … with approval before …"), do this — do not hand the user manual
    app and rewrites the agent-name tokens consistently.
 3. **Customize to the prompt:** edit only the marked extension points —
    `src/agent.py` (instructions + tools: at least one read tool and at least one
-   `@tool(approval_mode="always_require")` consequential tool) and
-   `frontend/components/Chat.tsx` (render cards for your tools). Keep the four
-   AG-UI resilience patches, the CopilotKit bridge, and the HITL `confirm_changes`
-   contract **unchanged**.
+   `@tool(approval_mode="always_require")` consequential tool; `AGENT_STATE_SCHEMA`/
+   `AGENT_PREDICT_STATE` for shared/predictive state) and `frontend/components/`
+   (CopilotKit v2 cards). Keep `backend/{bridge_app,hosted_proxy,hosted_client}.py`,
+   `build_hosted_agent()` (FoundryChatClient), the CopilotKit route, and the HITL
+   `confirm_changes` contract **unchanged**.
 4. **Prove it:** from the new app, run `make verify` (structural) and
-   `make smoke` (offline, `LLM_MODE=mock`, no Azure). Both MUST pass.
+   `make smoke` (the bridge against the REAL agent run locally via `azd ai agent
+   run`; needs `az login` + a provisioned project). Both MUST pass.
 5. **Run / deploy (optional):** `make local` for the dev loop; `make up` to deploy
    the hosted Foundry agent via `azd` (needs `az login` to the Foundry tenant).
 
@@ -48,6 +50,14 @@ message answering is **not** proof. The app is done only when `make verify` and
 ## Conventions
 
 - Directory name == template identity. Lowercase, hyphens.
-- Connection to Foundry is **keyless** (DefaultAzureCredential), Chat Completions
-  (NOT the Responses API) so HITL approve-resume does not 400.
+- **Foundry HOSTED agent + HITL-forwarding bridge.** All tools + HITL + history run
+  in the deployed Foundry hosted agent (`build_hosted_agent()` → **FoundryChatClient**,
+  Responses). The Container App bridge (`backend/bridge_app.py` → `HostedProxyAgent`)
+  forwards each turn to it and forwards `mcp_approval_response` on HITL approve so the
+  gated tool re-executes server-side — the native
+  `add_agent_framework_fastapi_endpoint(FoundryAgent)` path can't (verified live).
+  For local dev, `azd ai agent run` runs the SAME agent (`FoundryChatClient`,
+  Responses) on your machine, connected to your Foundry project's model; `make local`
+  and `make smoke` point the bridge at it (DIRECT mode) — no mock anywhere.
+  CopilotKit (**v2** hooks) is UI only.
 - Container images use **MCR** base images, never Docker Hub (ACR Tasks rate-limit).

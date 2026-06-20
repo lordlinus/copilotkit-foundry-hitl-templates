@@ -1,11 +1,14 @@
-# agent-framework-core (NOT the agent-framework meta-package, which drags in
-# agent-framework-hyperlight → hyperlight-sandbox-backend-wasm and fails Foundry's
-# remote build). foundry-hosting itself depends on agent-framework-core>=1.8.1.
-agent-framework-core==1.8.1
-agent-framework-openai==1.8.1
-agent-framework-foundry-hosting
+# Foundry HOSTED agent (Responses) deps — the DEPLOYED brain (tools + HITL +
+# history run here; the Container App is only a light bridge). Pin
+# agent-framework-CORE (NOT the meta agent-framework, which drags in
+# agent-framework-hyperlight → wasm and fails Foundry's remote build).
+# agent-framework-foundry provides FoundryChatClient, REQUIRED for in-hosted-agent
+# HITL (mcp_approval_response resume re-executes the tool; Chat Completions 500s).
 # mcp is imported by agent_framework_foundry_hosting._responses (McpError) and is
 # NOT pulled transitively on the remote build — must be explicit.
+agent-framework-core==1.9.0
+agent-framework-foundry==1.8.2
+agent-framework-foundry-hosting==1.0.0a260618
 mcp>=1.24.0,<2
 azure-identity>=1.19.0
 python-dotenv>=1.0.0

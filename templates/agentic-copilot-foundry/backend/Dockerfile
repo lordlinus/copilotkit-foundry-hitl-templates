@@ -13,7 +13,7 @@ WORKDIR /app
 COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# src/ is imported by the backend (sys.path insert in ag_ui_app.py).
+# src/ is imported by the backend (sys.path insert in ag_ui_app.py / hosted_proxy).
 COPY src/ ./src/
 COPY backend/ ./
 
@@ -22,4 +22,7 @@ RUN useradd --uid 1001 --create-home --shell /bin/false appuser \
 USER appuser
 
 EXPOSE 8080
-CMD ["uvicorn", "ag_ui_app:app", "--host", "0.0.0.0", "--port", "8080"]
+# DEPLOYED entrypoint = the light AG-UI↔Responses bridge (no LLM/tools). All logic
+# lives in the Foundry hosted agent. For an in-process agent instead (no hosted
+# agent), run ag_ui_app:app — that is what `make local`/`make smoke` use.
+CMD ["uvicorn", "bridge_app:app", "--host", "0.0.0.0", "--port", "8080"]

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """End-to-end HITL smoke test against the local AG-UI backend.
 
-Drives backend/ag_ui_app.py on http://localhost:8080/ exactly as the CopilotKit
-frontend does. Designed to run with `LLM_MODE=mock` so it needs NO Azure and NO
-real model (the Makefile `smoke` target starts the backend in mock mode).
+Drives backend/bridge_app.py on http://localhost:8080/ exactly as the CopilotKit
+frontend does. The Makefile `smoke` target runs the REAL agent locally via
+`azd ai agent run` and points the bridge at it (DIRECT mode) — so this exercises
+the real hosted-agent code path (real model), not a mock.
 
 Asserts:
   1. A read prompt reaches RUN_FINISHED and exposes state.

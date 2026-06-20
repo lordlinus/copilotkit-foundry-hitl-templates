@@ -1,81 +1,89 @@
 ---
 name: forgewright
-description: "Use when customizing, running, verifying, or deploying THIS forgewright app — a Next.js/CopilotKit UI over a FastAPI/AG-UI SSE backend hosting one Microsoft Agent Framework agent on Azure AI Foundry, with human-in-the-loop approval. Triggers: agent.py, ag_ui_app.py, confirm_changes, approval_mode always_require, CopilotKit route, make smoke, make verify, make up, Foundry hosted agent. Also use for the known traps — HITL approve-resume 400 'No tool output found', cards vanishing, [[...slug]] Threads 404/422, useSingleEndpoint, keyless Foundry 401 audience, Docker Hub rate-limit."
+description: "Use when customizing, running, verifying, or deploying THIS forgewright app — a Next.js/CopilotKit v2 UI over an AG-UI bridge (HostedProxyAgent) to a deployed Azure AI Foundry HOSTED agent (FoundryChatClient), with rich generative UI: tool cards, HITL approval (forwarded via mcp_approval_response). Triggers: agent.py build_hosted_agent, FoundryChatClient, HostedProxyAgent, bridge_app, hosted_proxy, hosted_client, mcp_approval_response, azd ai agent run, confirm_changes, approval_mode always_require, useAgent/useFrontendTool/useRenderTool/useHumanInTheLoop, make smoke, make verify, make up. Also for traps — HITL approve-resume 400, cards vanishing, [[...slug]] Threads 404/422, useSingleEndpoint, keyless Foundry 401 audience, Entra isolation 400, Docker Hub rate-limit."
 metadata:
   author: forgewright
-  version: "0.1.0"
+  version: "0.5.0"
 ---
 
 # forgewright app — customize, verify, deploy
 
-This app: Next.js + CopilotKit UI → FastAPI + AG-UI (SSE) → ONE Microsoft Agent
-Framework agent → Azure AI Foundry (keyless), with native human-in-the-loop
-approval. The same agent is publishable as a Foundry hosted agent via `azd`.
+Goal: a Foundry HOSTED agent (all tools + HITL + history server-side) + a CopilotKit
+UI with rich generative UI. The bridge (`backend/bridge_app.py` → `HostedProxyAgent`)
+forwards each turn to the hosted agent over Responses, translates to AG-UI, and
+forwards `mcp_approval_response` on HITL approve so the gated tool **re-executes
+server-side**. (The native `add_agent_framework_fastapi_endpoint(FoundryAgent)` path
+can't — it resolves `confirm_changes` locally; verified live.) For local dev,
+`azd ai agent run` runs the REAL agent on your machine (connected to your Foundry
+project) and `make smoke`/`make local` point the bridge at it (DIRECT mode), so smoke
+drives the SAME bridge code path as production — no mock.
 
-**Golden rule:** the dev server starting, `azd` SUCCESS, or one chat reply is
-**not** proof. Done only when `make verify` AND `make smoke` pass.
+**Golden rule:** a dev server starting or `azd` SUCCESS is **not** proof. Done =
+`make verify` + `make smoke` green AND a **live browser E2E** against the deployed
+agent (HITL approve re-executes; reject doesn't).
 
 ## 0. Orient
 
-- `LOAD references/architecture.md` — what lives where.
+- `LOAD references/architecture.md` — the bridge topology + live findings.
+- `LOAD references/patterns-7.md` — the 7 AG-UI patterns on this stack.
 - `LOAD references/troubleshooting.md` — every known trap → symptom → fix.
 
-## 1. Customize — ONLY these extension points
+## 1. Customize — extension points
 
-`src/agent.py`:
+`src/agent.py` (the single brain, `build_hosted_agent()` → FoundryChatClient):
 - `_INSTRUCTIONS` — behavior for your domain.
-- Tools — keep ≥1 read tool and ≥1 `@tool(approval_mode="always_require")`
-  consequential tool. Map "needs approval before X" to the gated tool.
-- If you rename tools, update `src/mock_client.py` (READ_TOOL / ACTION_TOOL /
-  keywords) and `scripts/smoke.py` (READ_PROMPT / ACTION_PROMPT / STATE_FIELD /
-  READ_TOOL) so `make smoke` still exercises the HITL gate.
+- Tools — keep >=1 read tool and >=1 `@tool(approval_mode="always_require")` gated tool.
+- Update `scripts/smoke.py`'s domain prompts (`READ_PROMPT`/`ACTION_PROMPT`/`STATE_FIELD`/`READ_TOOL`) so `make smoke` still exercises HITL.
 
-`frontend/components/Chat.tsx`:
-- Add/adjust `useCopilotAction` render cards. Keep the `confirm_changes` action
-  exactly as shipped.
+`frontend/components/` (CopilotKit **v2** hooks):
+- `useRenderTool` (tool cards), `useHumanInTheLoop` (keep `{ accepted, steps }`),
+  `useFrontendTool`, `useAgent`.
 
-**Do NOT touch:** the four AG-UI patches in `backend/ag_ui_app.py`, the bridge in
-`frontend/app/api/copilotkit/[[...slug]]/route.ts`, or `build_chat_client()`.
+**Do NOT touch:** `backend/{bridge_app,hosted_proxy,hosted_client}.py`,
+`build_hosted_agent()` (FoundryChatClient) in `src/agent.py`, or the CopilotKit
+bridge in `frontend/app/api/copilotkit/[[...slug]]/route.ts`.
 
-## 2. Prove it (no Azure)
+## 2. Prove it
 
 ```bash
-make verify     # structural: patches, bridge, HITL contract, name consistency, MCR base
-make smoke      # offline E2E: read works; action PAUSES; approve executes; reject doesn't; C9 + C10
+make verify     # structural: HostedProxyAgent, mcp_approval_response, FoundryChatClient, DIRECT mode, names, MCR
+make smoke      # bridge → REAL agent (azd ai agent run) — read; PAUSE; approve executes; reject doesn't; C9; C10
 ```
 
 ## 3. Run / deploy
 
 ```bash
-make local      # backend :8080 + frontend :3000 (LLM_MODE=mock works offline)
-make up         # azd → Foundry hosted agent (needs az login to the Foundry tenant)
+make local      # frontend :3000 + bridge :8080 → REAL agent local (azd ai agent run)
+make up         # azd → deploy the Foundry HOSTED agent (build_hosted_agent / FoundryChatClient)
 ```
+
+Deployed UI: run the bridge with `FOUNDRY_PROJECT_ENDPOINT` + `HOSTED_AGENT_NAME` →
+`HostedProxyAgent` drives the deployed agent. Then a **live browser E2E** (the real DoD).
 
 ## Load-bearing rules
 
-- **Keyless Foundry, Chat Completions (NOT Responses).** `DefaultAzureCredential`
-  + `ai.azure.com/.default` audience → `OpenAIChatCompletionClient(base_url=
-  "{FOUNDRY_PROJECT_ENDPOINT}/openai/v1")`. The Responses client 400s on HITL
-  approve-resume ("No tool output found").
-- **HITL contract:** the gated tool surfaces as `confirm_changes`; the UI resolves
-  with `{ accepted: boolean, steps }` (NOT `{ approved }`); action is
-  `available:"disabled"` + `renderAndWaitForResponse`.
-- **Four AG-UI patches** are mandatory with any HITL tool (collisions; split
-  multi-tool snapshot; fresh `parent_message_id`; journal result + scrub payload;
-  orphan repair).
-- **CopilotKit bridge:** catch-all `[[...slug]]`; `@copilotkit/runtime/v2`;
-  `createCopilotHonoHandler`; export POST/GET/PATCH/DELETE;
-  `useSingleEndpoint={false}`.
-- **Mock client** subclasses `FunctionInvocationLayer, BaseChatClient` (the Agent
-  skips tool execution for a plain `BaseChatClient`).
+- **`build_hosted_agent()` → `FoundryChatClient` (Responses)** — the single brain,
+  SAME code local (`azd ai agent run`) and deployed (`azd up`). Required so the hosted
+  `mcp_approval_request`/`mcp_approval_response` re-executes the gated tool (verified
+  live: 100→125 deployed, 100→110 local). No mock client.
+- **Bridge = `HostedProxyAgent`** (`hosted_proxy.py` + `hosted_client.py`), forwarding
+  turns + `mcp_approval_response`; `bridge_app.py` neutralises ag-ui's local approval
+  interception + splits multi-tool snapshots (`DISABLE_C9_SPLIT=1` on a v2 frontend).
+- **Local dev = `azd ai agent run`** runs the REAL agent (`ResponsesHostServer` +
+  `FoundryChatClient`) on your machine; `make smoke`/`make local` point the bridge at
+  it via DIRECT mode (`HOSTED_AGENT_DIRECT_URL`, `HOSTED_AUTH=none`). The deployed
+  bridge image stays lean (no foundry/openai/hosting — it runs no model).
+- The bridge must NOT send `x-ms-user-isolation-key` (deployed agents use Entra isolation
+  → 400). `SSEKeepAliveMiddleware` keeps the SSE alive during silent server-side tools.
+- **CopilotKit:** v2 hooks; catch-all `[[...slug]]`; `@copilotkit/runtime/v2`;
+  `createCopilotHonoHandler`; export POST/GET/PATCH/DELETE; `useSingleEndpoint={false}`.
 - **MCR base images** only (Docker Hub rate-limits ACR builds).
 
 ## Definition of Done
 
-- [ ] `make verify` green.
-- [ ] `make smoke` green (read; action PAUSES & doesn't execute; approve executes;
-      reject doesn't; C9; C10).
-- [ ] ≥1 read tool and ≥1 `approval_mode="always_require"` tool in `src/agent.py`.
+- [ ] `make verify` green (HostedProxyAgent + mcp_approval_response; build_hosted_agent uses FoundryChatClient; DIRECT mode wired).
+- [ ] `make smoke` green: bridge → REAL agent (azd ai agent run) — read; PAUSE; approve executes; reject doesn't; C9; C10.
+- [ ] >=1 read tool + >=1 `approval_mode="always_require"` tool.
 - [ ] Agent name consistent across `agent.py`, route, provider, hosted yaml.
 - [ ] No secrets / endpoints / app-specific hard-coding committed.
-- [ ] (If deploying) `make up` succeeds AND a live action pauses for approval.
+- [ ] **Live** browser E2E against the deployed agent — HITL approve (re-executes, state changes) AND reject (no change), plus tool-render cards.

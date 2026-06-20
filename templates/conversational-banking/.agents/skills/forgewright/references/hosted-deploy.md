@@ -1,8 +1,9 @@
 # Hosted deploy — publish the agent as a Foundry hosted agent (azd)
 
-The same `build_agent()` that the local AG-UI backend serves is also published as
-an **Azure AI Foundry hosted agent** over the Responses protocol. This runs from
-`hosted/` and needs an Azure subscription + a Foundry-enabled tenant.
+The `build_hosted_agent()` that backs the deployed brain (FoundryChatClient,
+Responses) is published as an **Azure AI Foundry hosted agent**. This runs from
+`hosted/` and needs an Azure subscription + a Foundry-enabled tenant. The same
+`src/agent.py` tools also run in-process via `build_agent()` for `make smoke`.
 
 ## Prerequisites
 
@@ -35,7 +36,7 @@ agent described by `agent.yaml` / `agent.manifest.yaml`.
 - **helloworld placeholder deployed** → you ran `azd provision` only; run
   `make up` (provision + deploy).
 - **401 "audience is incorrect"** at runtime → the agent must request the
-  `https://ai.azure.com/.default` audience (the template's `build_chat_client`
+  `https://ai.azure.com/.default` audience (the template's `build_hosted_agent`
   already does).
 
 ## Prove the hosted agent (live)
@@ -45,8 +46,15 @@ toolkit `azd ai agent run`, or the Foundry portal playground) and confirm that
 **one consequential action pauses for human approval** before executing — the
 same HITL contract you verified locally with `make smoke`.
 
-## Connecting a frontend to the hosted agent
+## Connecting a frontend to the hosted agent (the light bridge)
 
-For local UI against the hosted agent, point the AG-UI backend's model at the
-deployed project (`FOUNDRY_PROJECT_ENDPOINT` + `AZURE_AI_MODEL_DEPLOYMENT_NAME`)
-and run `make local`. The CopilotKit bridge is unchanged.
+In production the chat UI does NOT run the agent — it talks to the deployed Foundry
+hosted agent through the **light bridge** (`backend/bridge_app.py`, the
+`backend/Dockerfile` default). Deploy the bridge as a Container App and point the
+CopilotKit runtime's `AG_UI_BACKEND_URL` at it; set `FOUNDRY_PROJECT_ENDPOINT` +
+`HOSTED_AGENT_NAME` (the deployed agent) on the bridge so `HostedProxyAgent` can reach
+it keyless. Run a single replica (per-thread conversation/session cache is
+in-memory) or externalise the cache. The CopilotKit `route.ts` bridge is unchanged.
+
+For a quick Azure-free loop against the **in-process** agent instead, run
+`make local` (serves `bridge_app:app` with the mock client, no Azure).

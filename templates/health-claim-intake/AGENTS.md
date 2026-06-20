@@ -15,16 +15,18 @@ Done.
   `@tool(approval_mode="always_require")` consequential tool.
 - `frontend/components/Chat.tsx` — render cards for your tools (keep
   `confirm_changes` as-is).
-- If you rename tools, update `src/mock_client.py` and `scripts/smoke.py` so
-  `make smoke` still exercises the HITL gate.
+- If you rename tools, update `scripts/smoke.py`'s domain prompts (READ_PROMPT/
+  ACTION_PROMPT/STATE_FIELD/READ_TOOL) so `make smoke` still exercises the HITL gate.
 
 ## Do NOT edit
 
-The four AG-UI resilience patches in `backend/ag_ui_app.py`, the CopilotKit
-bridge in `frontend/app/api/copilotkit/[[...slug]]/route.ts`, and the keyless
-Chat-Completions client in `build_chat_client()`.
+`backend/{bridge_app,hosted_proxy,hosted_client}.py`;
+`build_hosted_agent()` (FoundryChatClient) in `src/agent.py`; and the CopilotKit
+bridge in `frontend/app/api/copilotkit/[[...slug]]/route.ts`.
+
 
 ## Prove it
 
-`make verify` (structural) and `make smoke` (offline, `LLM_MODE=mock`) must both
-pass. `azd`/dev-server starting is not proof.
+`make verify` (structural) and `make smoke` (bridge → REAL agent via `azd ai agent
+run`; needs `az login` + a provisioned project) must both pass. `azd`/dev-server
+starting is not proof.

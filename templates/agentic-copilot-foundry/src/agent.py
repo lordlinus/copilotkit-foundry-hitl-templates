@@ -1,8 +1,16 @@
-"""The ONE Microsoft Agent Framework agent — imported by both front doors.
+"""The ONE Microsoft Agent Framework agent — the single source of truth.
 
-`backend/ag_ui_app.py` (local AG-UI/SSE behind CopilotKit) and
-`hosted/responses/main.py` (Foundry hosted Responses agent) both import
-`build_agent()` from here, so your business logic lives in exactly one place.
+`build_hosted_agent()` builds the agent (tools + instructions) on a
+**FoundryChatClient** (Responses). It is the brain everywhere — the SAME code runs:
+  * **local dev:** `azd ai agent run` runs it on your machine (hot reload),
+    connected to your Foundry project's model;
+  * **deployed:** `azd up` publishes it as a Foundry HOSTED agent.
+
+Either way `ResponsesHostServer` (`app.py` / `hosted/responses/main.py`) serves the
+Responses protocol, and the bridge (`backend/bridge_app.py` → `HostedProxyAgent`)
+forwards each AG-UI turn to it and forwards `mcp_approval_response` on HITL approve,
+so the gated tool re-executes server-side. There is **no mock** — `make local` and
+`make smoke` drive the real agent via `azd ai agent run`.
 
 This is a **domain-agnostic starter**. Replace the demo store + two tools with
 your own. Keep the shape:
@@ -11,13 +19,7 @@ your own. Keep the shape:
   * one or more *consequential* tools decorated `@tool(approval_mode="always_require")`
     so the runtime pauses for human approval before the body runs.
 
-Connection to Azure AI Foundry is **keyless** by default (DefaultAzureCredential):
-we build an ``OpenAIChatCompletionClient`` against ``{FOUNDRY_PROJECT_ENDPOINT}/openai/v1``
-with the ``https://ai.azure.com/.default`` audience. We use **Chat Completions, NOT
-the Responses API**, because HITL approve-resume returns HTTP 400
-("No tool output found for function call") on the Responses path. ``LLM_MODE=mock``
-swaps in a deterministic offline client so the whole stack (SSE + HITL) runs with
-no Azure resources — used by `make smoke` and CI.
+Connection to Azure AI Foundry is **keyless** (DefaultAzureCredential).
 """
 
 from __future__ import annotations
@@ -86,52 +88,33 @@ async def apply_delta(delta: float) -> str:
 AGENT_TOOLS = [get_value, apply_delta]
 
 
-def build_chat_client():
-    """Build the chat client. Three modes, in priority order:
+# ── Shared/predictive state config (override per template; see patterns-7.md) ──
+# When a tool writes a state key, map it here so the AG-UI adapter natively emits
+# StateSnapshot/StateDelta to CopilotKit's useAgent. Empty = no shared state demo.
+AGENT_STATE_SCHEMA: dict | None = None
+AGENT_PREDICT_STATE: dict | None = None
 
-    1. ``LLM_MODE=mock`` — deterministic offline client (no Azure). For tests/CI.
-    2. ``LLM_API_KEY`` set — OpenAI-compatible gateway via key (e.g. APIM).
-    3. default — **keyless Foundry** via DefaultAzureCredential.
 
-    Modes 2 and 3 both use ``OpenAIChatCompletionClient`` (Chat Completions),
-    never the Responses API, so HITL approve-resume does not 400.
+def build_hosted_agent():
+    """The agent — the single brain. Served by `ResponsesHostServer`
+    (`app.py` / `hosted/responses/main.py`): deployed via `azd up`, and run locally
+    for development via `azd ai agent run` (the same code, connected to the env's
+    Foundry resources). Uses **`FoundryChatClient` (Responses)** — REQUIRED for HITL:
+    the runtime emits an `mcp_approval_request` and the bridge resumes with an
+    `mcp_approval_response`, which re-executes the gated tool server-side (verified
+    live: approve → tool runs, state changes). `store=False` — hosting manages history.
     """
-    mode = os.environ.get("LLM_MODE", "").strip().lower()
-    if mode == "mock":
-        logger.info("[agent] LLM_MODE=mock — deterministic offline client")
-        from mock_client import MockChatClient
-
-        return MockChatClient()
-
-    from agent_framework_openai import OpenAIChatCompletionClient
-
-    key = os.environ.get("LLM_API_KEY")
-    if key:
-        base_url = os.environ["LLM_BASE_URL"]
-        header = os.environ.get("LLM_AUTH_HEADER", "Ocp-Apim-Subscription-Key")
-        model = os.environ.get("AZURE_AI_MODEL_DEPLOYMENT_NAME") or os.environ.get("MODEL", "gpt-4.1")
-        logger.info("[agent] key-based OpenAIChatCompletionClient | model=%s", model)
-        return OpenAIChatCompletionClient(
-            model=model, api_key=key, base_url=base_url, default_headers={header: key}
-        )
-
-    from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+    from agent_framework import Agent
+    from agent_framework.foundry import FoundryChatClient
+    from azure.identity import DefaultAzureCredential
 
     project = os.environ["FOUNDRY_PROJECT_ENDPOINT"].rstrip("/")
     model = os.environ["AZURE_AI_MODEL_DEPLOYMENT_NAME"]
-    logger.info("[agent] keyless Foundry OpenAIChatCompletionClient | model=%s", model)
-    return OpenAIChatCompletionClient(
-        model=model,
-        base_url=f"{project}/openai/v1",
-        credential=get_bearer_token_provider(
-            DefaultAzureCredential(), "https://ai.azure.com/.default"
-        ),
-    )
+    logger.info("[agent] keyless Foundry FoundryChatClient (Responses) | model=%s", model)
+    client = FoundryChatClient(project_endpoint=project, model=model,
+                               credential=DefaultAzureCredential())
 
-
-def build_agent():
-    agent = build_chat_client().as_agent(
-        name=AGENT_NAME, instructions=_INSTRUCTIONS, tools=AGENT_TOOLS
-    )
-    logger.info("[agent] built %s | tools=%d", AGENT_NAME, len(AGENT_TOOLS))
+    agent = Agent(client=client, name=AGENT_NAME, instructions=_INSTRUCTIONS,
+                  tools=AGENT_TOOLS, default_options={"store": False})
+    logger.info("[agent] built hosted %s (Responses) | tools=%d", AGENT_NAME, len(AGENT_TOOLS))
     return agent

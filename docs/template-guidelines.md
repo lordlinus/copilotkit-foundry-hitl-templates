@@ -19,13 +19,13 @@ A template is a complete, runnable app:
 | Path | Purpose |
 | --- | --- |
 | `manifest.json` | `templateId`, `displayName`, `description`, `stack`, `services`, `tokens` |
-| `src/agent.py` | ONE MAF agent; ≥1 read tool + ≥1 `approval_mode="always_require"` tool; `build_chat_client()` |
-| `src/mock_client.py` | offline deterministic client for `LLM_MODE=mock` |
-| `backend/ag_ui_app.py` | FastAPI + AG-UI + the four resilience patches |
+| `src/agent.py` | ONE MAF agent; ≥1 read tool + ≥1 `approval_mode="always_require"` tool; `build_hosted_agent()` (FoundryChatClient) |
+| `backend/bridge_app.py` | AG-UI server → `HostedProxyAgent` (DIRECT local / platform deployed) |
+| `backend/{hosted_proxy,hosted_client}.py` | the bridge: forward turns + `mcp_approval_response` to the hosted agent |
 | `backend/requirements.txt`, `backend/Dockerfile` | pinned deps; MCR base |
 | `hosted/azure.yaml`, `hosted/responses/{main.py,Dockerfile,agent.yaml,agent.manifest.yaml}` | azd → Foundry hosted agent |
-| `frontend/` | Next.js + CopilotKit (catch-all route, `useSingleEndpoint={false}`, `confirm_changes` action) |
-| `scripts/verify.sh`, `scripts/smoke.py`, `scripts/smoke_run.sh`, `scripts/lib.sh` | the proof |
+| `frontend/` | Next.js + CopilotKit v2 (catch-all route, `useSingleEndpoint={false}`, `useHumanInTheLoop`/`confirm_changes`) |
+| `scripts/verify.sh`, `scripts/smoke.py`, `scripts/smoke_run.sh`, `scripts/lib-agentrun.sh`, `scripts/lib.sh` | the proof |
 | `Makefile` + `Makefile.targets`, `run-local.sh`, `README.md`, `.gitignore` | flow + docs |
 | `AGENTS.md`, `.agents/skills/forgewright/SKILL.md` (+ `references/`), `.mcp.json` | self-contained agent guidance |
 
@@ -33,18 +33,22 @@ A template is a complete, runnable app:
 
 A template MUST NOT break these — `scripts/verify.sh` checks them:
 
-1. **Chat Completions, not Responses** (`OpenAIChatCompletionClient`); never the
-   Responses-API `OpenAIChatClient` (HITL approve-resume 400s).
+1. **Hosted agent uses `FoundryChatClient` (Responses)** in `build_hosted_agent` —
+   so HITL `mcp_approval_response` re-executes the gated tool server-side. The SAME
+   agent runs locally (`azd ai agent run`) and deployed (`azd up`); never the
+   Responses-API `OpenAIChatClient`.
 2. **Keyless Foundry** via `DefaultAzureCredential` with the
    `https://ai.azure.com/.default` audience.
-3. **The four AG-UI resilience patches** present in `backend/ag_ui_app.py`.
+3. **The bridge** (`bridge_app.py` → `HostedProxyAgent`) forwards each turn AND
+   `mcp_approval_response`; `bridge_app.py` routes HITL to the hosted
+   agent (not local) + splits multi-tool snapshots.
 4. **The CopilotKit bridge**: catch-all `[[...slug]]`, `@copilotkit/runtime/v2`,
    `createCopilotHonoHandler`, POST/GET/PATCH/DELETE exports,
    `useSingleEndpoint={false}`.
-5. **The HITL contract**: `confirm_changes` action, `available:"disabled"`,
-   `renderAndWaitForResponse`, `{accepted, steps}` response shape.
+5. **The HITL contract**: `confirm_changes` surfaced; UI resolves via
+   `useHumanInTheLoop` with `{accepted, steps}`.
 6. **MCR base images** (never Docker Hub).
-7. **An offline `make smoke`** that proves read + pause + approve + reject + C9 + C10.
+7. **A `make smoke`** (bridge → REAL agent via `azd ai agent run`) that proves read + pause + approve + reject + C9 + C10.
 8. **Name consistency** across agent.py / route / provider / hosted yaml.
 
 ## After changes

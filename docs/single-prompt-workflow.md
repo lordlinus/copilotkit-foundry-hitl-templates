@@ -27,18 +27,21 @@ How a coding agent turns one sentence into a verified, running app.
      `get_order_status`).
    - Replace the demo `apply_delta` with the consequential tool, keeping
      `@tool(approval_mode="always_require")` (e.g. `place_order`).
-   In `frontend/components/Chat.tsx`, add render cards for the new tools; keep the
-   `confirm_changes` HITL action unchanged.
-   If you renamed tools, update `src/mock_client.py` and `scripts/smoke.py` so the
-   offline smoke still drives the read + the approval-gated tool.
+   In `frontend/components/`, add CopilotKit v2 render cards for the new tools
+   (`useRenderTool`); keep the `useHumanInTheLoop` / `confirm_changes` HITL gate
+   unchanged.
+   If you renamed tools, update `scripts/smoke.py`'s domain prompts (`READ_PROMPT` /
+   `ACTION_PROMPT` / `STATE_FIELD` / `READ_TOOL`) so smoke still drives the read +
+   the approval-gated tool.
 
 4. **Prove it.**
    ```bash
    cd ~/projects/product-orderer
    make verify     # structural checks
-   make smoke      # offline end-to-end HITL — no Azure, no model
+   make smoke      # end-to-end HITL against the REAL agent (azd ai agent run)
    ```
-   Both must be green. This is the bar for "done".
+   Both must be green. This is the bar for "done". `make smoke` needs `az login` +
+   a provisioned Foundry project (`make up` once).
 
 5. **Run / deploy (optional).** `make local` for the dev loop; set
    `FOUNDRY_PROJECT_ENDPOINT` + `AZURE_AI_MODEL_DEPLOYMENT_NAME` and
@@ -46,8 +49,10 @@ How a coding agent turns one sentence into a verified, running app.
 
 ## Why this is reliable
 
-The template ships the *hard parts already solved and verified*: the four AG-UI
-resilience patches, the CopilotKit multi-route bridge, the keyless
-Chat-Completions Foundry client, and an offline mock that exercises the whole
-HITL path. The agent only writes domain logic, then the checks prove the wiring
+The template ships the *hard parts already solved and verified*: the AG-UI bridge
+(`HostedProxyAgent`) that forwards turns and `mcp_approval_response` to the Foundry
+hosted agent so HITL re-executes server-side, the CopilotKit v2 multi-route bridge,
+the keyless `FoundryChatClient` hosted agent — run the SAME agent locally for
+development via `azd ai agent run`, which `make smoke` exercises through the bridge.
+The agent only writes domain logic, then the checks prove the wiring
 still holds. The agent is told never to declare success on an unverified build.

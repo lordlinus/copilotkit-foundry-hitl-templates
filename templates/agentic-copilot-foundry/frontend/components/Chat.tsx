@@ -1,7 +1,16 @@
 "use client";
 
-import { useCopilotAction } from "@copilotkit/react-core";
-import { CopilotChat } from "@copilotkit/react-ui";
+import {
+  CopilotChat,
+  useHumanInTheLoop,
+  useRenderTool,
+  useAgent,
+  UseAgentUpdate,
+} from "@copilotkit/react-core/v2";
+import { z } from "zod";
+
+// MUST match the provider `agent` prop and AGENT_NAME in src/agent.py.
+const AGENT_NAME = "forgewright_app";
 
 function asPayload(result: unknown): any {
   if (!result) return {};
@@ -16,17 +25,37 @@ function asPayload(result: unknown): any {
 }
 
 export default function Chat() {
-  // ── THE HITL GATE ───────────────────────────────────────────────────────
-  // When a tool marked approval_mode="always_require" is called, the AG-UI
-  // runtime PAUSES and emits a synthetic `confirm_changes` tool call carrying
-  // the original function name + arguments + approval `steps`. CopilotKit
-  // renders THIS action and waits. We resolve it with { accepted, steps } —
-  // the shape the backend expects (its check is `"accepted" in parsed`).
-  // Nothing consequential runs until the user clicks Approve.
-  useCopilotAction({
+  // Shared state (lights up once the hosted agent + bridge emit StateSnapshot/Delta
+  // for a state_schema; harmless before then). See references/patterns-7.md.
+  const { agent } = useAgent({
+    agentId: AGENT_NAME,
+    updates: [UseAgentUpdate.OnStateChanged],
+  });
+  const value = (agent?.state as { value?: number } | undefined)?.value;
+
+  // -- THE HITL GATE (v2 useHumanInTheLoop) ---------------------------------
+  // A tool marked approval_mode="always_require" surfaces (via the bridge /
+  // in-process adapter) as a synthetic `confirm_changes` tool call carrying the
+  // original function name + arguments + approval `steps`. We resolve it with
+  // { accepted, steps } -- the shape the backend expects. Nothing consequential
+  // runs until Approve.
+  useHumanInTheLoop({
+    agentId: AGENT_NAME,
     name: "confirm_changes",
-    available: "disabled",
-    renderAndWaitForResponse: ({ status, args, respond }) => {
+    description: "Approve or reject a consequential action before it executes.",
+    parameters: z.object({
+      function_name: z.string().optional(),
+      function_arguments: z.any().optional(),
+      steps: z
+        .array(
+          z.object({
+            description: z.string(),
+            status: z.enum(["enabled", "disabled", "executing"]),
+          }),
+        )
+        .optional(),
+    }),
+    render: ({ args, respond, status }: any) => {
       const fnName = String(args?.function_name ?? "apply_delta");
       let fnArgs: any = args?.function_arguments ?? {};
       if (typeof fnArgs === "string") {
@@ -39,18 +68,21 @@ export default function Chat() {
       const steps = args?.steps ?? [{ description: `Execute ${fnName}`, status: "enabled" }];
 
       if (status === "complete") {
-        return <div className="card resolved">✓ Decision recorded</div>;
+        return <div className="card resolved">Decision recorded</div>;
       }
       return (
         <div className="approval">
           <div className="approval-head">
-            ✋ Approval required <span className="pill">HUMAN-IN-THE-LOOP</span>
+            Approval required <span className="pill">HUMAN-IN-THE-LOOP</span>
           </div>
           <div className="approval-body">
             <div className="fn">{fnName}</div>
             <pre className="args">{JSON.stringify(fnArgs, null, 2)}</pre>
             <div className="approval-actions">
-              <button className="btn approve" onClick={() => respond?.({ accepted: true, steps })}>
+              <button
+                className="btn approve"
+                onClick={() => respond?.({ accepted: true, steps })}
+              >
                 Approve
               </button>
               <button
@@ -71,38 +103,35 @@ export default function Chat() {
     },
   });
 
-  // ── Result card for the consequential tool (post-execution) ───────────────
-  useCopilotAction({
+  // -- Backend tool render: result card for the consequential tool ----------
+  useRenderTool({
     name: "apply_delta",
-    available: "disabled",
-    render: ({ result, status }) => {
+    parameters: z.object({ delta: z.number().optional() }),
+    render: ({ result, status }: any) => {
       if (status !== "complete") return <></>;
       const p = asPayload(result);
       if (p.status !== "ok") return <></>;
-      return <div className="card resolved">✓ Applied · value is now {p.value}</div>;
+      return <div className="card resolved">Applied - value is now {p.value}</div>;
     },
   });
 
-  // ── Read-only render for context ──────────────────────────────────────────
-  useCopilotAction({
+  // -- Backend tool render: read tool ---------------------------------------
+  useRenderTool({
     name: "get_value",
-    available: "disabled",
-    render: ({ result }) => {
+    parameters: z.object({}),
+    render: ({ result }: any) => {
       const p = asPayload(result);
       if (p.value === undefined) return <></>;
-      return <div className="card">Current value · {p.value}</div>;
+      return <div className="card">Current value - {p.value}</div>;
     },
   });
 
   return (
-    <CopilotChat
-      className="chat"
-      labels={{
-        title: "forgewright assistant",
-        initial:
-          "Hi! Ask me for the current value, or to apply a change — e.g. " +
-          "“apply a delta of 25”. Any change pauses for your approval first.",
-      }}
-    />
+    <>
+      {value !== undefined && (
+        <div className="state-banner">Shared state - value = {value}</div>
+      )}
+      <CopilotChat agentId={AGENT_NAME} className="chat" />
+    </>
   );
 }
