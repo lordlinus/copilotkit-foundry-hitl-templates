@@ -1,5 +1,6 @@
-# AG-UI backend (FastAPI + SSE). Serves the agent_framework_ag_ui endpoint at /
-# with the four resilience patches baked into ag_ui_app.py.
+# AG-UI bridge (FastAPI + SSE). Serves the agent_framework_ag_ui endpoint at /,
+# backed by HostedProxyAgent (the thin AG-UI↔Responses bridge) with its two
+# resilience patches applied in bridge_app.py.
 #
 # MCR base image (NOT Docker Hub) — `az acr build` / ACR Tasks hit Docker Hub's
 # anonymous pull rate limit ("toomanyrequests") constantly.
@@ -13,7 +14,7 @@ WORKDIR /app
 COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# src/ is imported by the backend (sys.path insert in ag_ui_app.py / hosted_proxy).
+# src/ is imported by the backend (sys.path insert in hosted_proxy / bridge_app).
 COPY src/ ./src/
 COPY backend/ ./
 
@@ -22,7 +23,6 @@ RUN useradd --uid 1001 --create-home --shell /bin/false appuser \
 USER appuser
 
 EXPOSE 8080
-# DEPLOYED entrypoint = the light AG-UI↔Responses bridge (no LLM/tools). All logic
-# lives in the Foundry hosted agent. For an in-process agent instead (no hosted
-# agent), run ag_ui_app:app — that is what `make local`/`make smoke` use.
+# Entrypoint = the light AG-UI↔Responses bridge (no LLM/tools). All logic lives in
+# the Foundry hosted agent; the bridge forwards turns + mcp_approval_response to it.
 CMD ["uvicorn", "bridge_app:app", "--host", "0.0.0.0", "--port", "8080"]

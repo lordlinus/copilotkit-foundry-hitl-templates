@@ -7,8 +7,8 @@ Each row is a real failure mode encoded as a check in `scripts/verify.sh` or
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| Approve a tool → `RUN_ERROR` 400 **"No tool output found for function call"** | Using the Responses-API `OpenAIChatClient` | Use `OpenAIChatCompletionClient` (Chat Completions). `verify.sh` fails if it sees `OpenAIChatClient`. |
-| Approval card never appears | `confirm_changes` action not registered, or not `available:"disabled"` with `renderAndWaitForResponse` | Keep the `confirm_changes` `useCopilotAction` from the template verbatim. |
+| Approve a tool → `RUN_ERROR` 400/500 **"No tool output found for function call"** | the hosted agent uses Chat Completions (`OpenAIChatClient`/`OpenAIChatCompletionClient`) instead of Responses | `build_hosted_agent` MUST use `FoundryChatClient` (Responses) so the hosted `mcp_approval_response` re-executes the tool. `verify.sh` checks for `FoundryChatClient`. |
+| Approval card never appears | `confirm_changes` not registered via the v2 `useHumanInTheLoop` hook | Keep the `confirm_changes` `useHumanInTheLoop({ name: "confirm_changes", ... })` from the template verbatim. |
 | Clicking Approve does nothing / tool never runs | Resolving with `{ approved }` | Resolve with `{ accepted: boolean, steps }`. Backend detection is `"accepted" in parsed`. |
 | Approve works once, next message 400s with orphaned `call_…` | (pre-rc5) stale approval payload re-sent | Handled NATIVELY on agent-framework-ag-ui rc5 — do not re-add the old hand-rolled patches. |
 | Consequential tool runs WITHOUT asking | Tool missing `approval_mode="always_require"` | Decorate the consequential tool. `verify.sh` requires at least one. |

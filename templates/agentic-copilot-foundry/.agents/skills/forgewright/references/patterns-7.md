@@ -24,10 +24,11 @@ CopilotKit **v2** hooks (`@copilotkit/react-core/v2`):
 
 ## How it works on this stack
 
-- **Native (offline / in-process):** `add_agent_framework_fastapi_endpoint(agent)`
+- **Native adapter (reference):** `add_agent_framework_fastapi_endpoint(agent)`
   natively emits all AG-UI events — text, TOOL_CALL_* cards, function-approval HITL,
-  and StateSnapshot/Delta (via `state_schema`+`predict_state_config`). This backs
-  `make smoke` (mock) and works fully in-process.
+  and StateSnapshot/Delta (via `state_schema`+`predict_state_config`) — *when it
+  wraps a plain in-process `Agent`*. The templates don't run the agent in-process;
+  they keep all logic in the Foundry hosted agent and reach it through the bridge.
 - **Deployed (hosted agent):** the bridge is `HostedProxyAgent`, NOT the native
   `add_agent_framework_fastapi_endpoint(FoundryAgent(...))`. The native FoundryAgent
   path translates read/cards/HITL-*pause*, but on HITL **approve it does NOT
@@ -42,7 +43,7 @@ CopilotKit **v2** hooks (`@copilotkit/react-core/v2`):
 | 2 | Backend Tool Rendering | `@tool` | `useRenderTool` | HostedProxyAgent forwards function_call/result |
 | 3 | HITL approval | `@tool(approval_mode="always_require")` | `useHumanInTheLoop` → `{accepted, steps}` | bridge forwards mcp_approval_response (re-executes) |
 | 5 | Tool-Based Generative UI | `FunctionTool(func=None)` | `useFrontendTool` render | stream tool-call args |
-| 4 / 6 / 7 | Agentic Generative / Shared / Predictive State | `state_schema` + `predict_state_config` | `useAgent` + `setState` | bridge relays text/tool-arg deltas; state synthesis is roadmap for the deployed path (works natively in-process) |
+| 4 / 6 / 7 | Agentic Generative / Shared / Predictive State | `state_schema` + `predict_state_config` | `useAgent` + `setState` | bridge relays text/tool-arg deltas; state synthesis through the deployed bridge is roadmap (native only when the adapter wraps an in-process agent) |
 
 ## HITL contract
 
@@ -61,9 +62,9 @@ isolation → 400).
 
 ## Roadmap: shared / predictive state through the DEPLOYED bridge
 
-Shared State, Predictive State, and Agentic Generative UI work **natively in-process**
-(offline mock, and an in-process Foundry agent) via `state_schema` +
-`predict_state_config`. Through the DEPLOYED bridge they are **not yet wired**: the
+Shared State, Predictive State, and Agentic Generative UI are emitted **natively by
+the AG-UI adapter when it wraps an in-process `Agent`** (via `state_schema` +
+`predict_state_config`). Through the DEPLOYED bridge they are **not yet wired**: the
 hosted Responses stream would need `HostedProxyAgent` to relay
 `response.function_call_arguments.delta` as growing tool-call args, and to forward
 `useAgent.setState` (RunInput.state) to the hosted agent. The plumbing is understood

@@ -2,8 +2,8 @@
 
 The `build_hosted_agent()` that backs the deployed brain (FoundryChatClient,
 Responses) is published as an **Azure AI Foundry hosted agent**. This runs from
-`hosted/` and needs an Azure subscription + a Foundry-enabled tenant. The same
-`src/agent.py` tools also run in-process via `build_agent()` for `make smoke`.
+`hosted/` and needs an Azure subscription + a Foundry-enabled tenant. The SAME
+`build_hosted_agent()` runs locally for development via `azd ai agent run`.
 
 ## Prerequisites
 
@@ -56,5 +56,5 @@ CopilotKit runtime's `AG_UI_BACKEND_URL` at it; set `FOUNDRY_PROJECT_ENDPOINT` +
 it keyless. Run a single replica (per-thread conversation/session cache is
 in-memory) or externalise the cache. The CopilotKit `route.ts` bridge is unchanged.
 
-For a quick Azure-free loop against the **in-process** agent instead, run
-`make local` (serves `bridge_app:app` with the mock client, no Azure).
+For the local dev loop, `make local` runs the SAME agent locally via
+`azd ai agent run` and points the bridge (`bridge_app:app`) at it — no mock.

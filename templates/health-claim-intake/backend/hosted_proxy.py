@@ -7,7 +7,7 @@ expects (text, tool-call cards, and the confirm_changes approval card).
 
 HITL: the hosted agent emits an ``mcp_approval_request`` for approval-gated tools;
 we surface it as a ``confirm_changes`` tool call (the frontend's
-``useCopilotAction`` renders Approve/Reject). On the next turn the decision comes
+``useHumanInTheLoop`` renders Approve/Reject). On the next turn the decision comes
 back and is routed to the hosted agent as an ``mcp_approval_response``
 (``bridge_app`` neutralises ag-ui's local approval interception inline so it
 reaches us — proven load-bearing: disabling it means approve never re-executes).
