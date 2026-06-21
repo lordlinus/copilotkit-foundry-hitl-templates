@@ -32,10 +32,9 @@ AG-UI support?”* This doc is the precise answer.
 **For the MAF agents — yes, deliberately.** `agent_framework_ag_ui` maps MAF’s
 streaming / tool-call / approval model onto AG-UI events for us. Re-implementing
 that against `ag_ui.core` would mean rebuilding the whole MAF→AG-UI translation.
-The cost of the convenience is the **four resilience patches** in each
-`backend/ag_ui_app.py` — the framework’s translation has bugs we work around
-(HITL approve-replay 400, multi-tool snapshot splitting, orphaned-tool-call
-replay 400). See those files’ headers and
+The cost of the convenience is the **two resilience patches** in each
+`backend/bridge_app.py` — HITL approval routing (so approve re-executes in the
+hosted agent) and multi-tool snapshot splitting. See those files’ headers and
 [`templates/*/AGENTS.md`](../../templates).
 
 **For the Copilot agent — no framework.** AG-UI on the wire is trivial, so

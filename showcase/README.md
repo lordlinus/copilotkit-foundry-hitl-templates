@@ -49,7 +49,8 @@ showcase/
   agents.json              registry served at GET /agents (id, title, source link, …)
   gateway/                 the always-on container
     app.py                 FastAPI: CORS allow-list + /agents + SSE reverse-proxy
-    launcher.py            supervises one uvicorn per template backend, then the gateway
+    launcher.py            per agent: the Foundry hosted-agent runtime
+                           (ResponsesHostServer) + the AG-UI bridge, then the gateway
     Dockerfile             MCR base; build context = repo root (copies templates/<id>)
     azure.yaml + infra/    azd: one Container App (scale-to-zero), ACR, managed identity, roles
   ui/                      static gallery + AG-UI chat (Vite + TypeScript)
@@ -81,11 +82,15 @@ make gateway                # http://localhost:8080  (GET /healthz, /agents)
 make ui-dev                 # http://localhost:5173
 ```
 
-Offline plumbing check (no Azure, no cost) — drives the full AG-UI + HITL path:
+End-to-end plumbing check — drives the full AG-UI + HITL path through the gateway,
+the bridge, and the real hosted-agent runtime:
 
 ```bash
-make smoke                  # starts the gateway in LLM_MODE=mock and asserts
-                            # read works, action PAUSES, approve executes, reject doesn't
+make smoke                  # runs the gateway (real hosted-agent runtime + bridge)
+                            # and asserts read works, action PAUSES, approve
+                            # executes, reject doesn't. Needs `az login` + a Foundry
+                            # project (FOUNDRY_PROJECT_ENDPOINT + a model) — there
+                            # is no mock (the gateway runs the REAL agent runtime).
 ```
 
 ---
@@ -102,14 +107,15 @@ make verify                 # Tier-1: production build + jsdom DOM tests
                             #  a form result renders as a form — not raw JSON)
 
 cd ui && npm run test:e2e   # Tier-2: Playwright in a real browser against a
-                            # mock-mode gateway (catches the @ag-ui/client
+                            # running gateway (catches the @ag-ui/client
                             # detached-fetch crash, approval cards below the fold,
                             # etc.) and screenshots each agent's HITL flow
 ```
 
-Both tiers run in CI (`.github/workflows/showcase-ui-e2e.yml`); Tier-2 starts the
-gateway in `LLM_MODE=mock`, so it needs no Azure. DOM-test fixtures in
-`ui/test/fixtures/` are recorded from the real agents.
+Both tiers run in CI (`.github/workflows/showcase-ui-e2e.yml`). Tier-2 starts the
+real gateway (hosted-agent runtime + bridge), so it needs `az login` + a Foundry
+project — there is no offline mock. DOM-test fixtures in `ui/test/fixtures/` are
+recorded from the real agents.
 
 > **Definition of done for a UI change:** `make verify` passes locally and the
 > Playwright job is green with screenshots — *not* "the dev server started".

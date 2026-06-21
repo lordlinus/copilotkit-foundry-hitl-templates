@@ -1,5 +1,6 @@
 # forgewright showcase — convenience targets.
-# Real Foundry by default; set LLM_MODE=mock for an offline plumbing test.
+# Runs the real hosted-agent runtime + AG-UI bridge per agent; needs `az login`
+# + a Foundry project (FOUNDRY_PROJECT_ENDPOINT + AZURE_AI_MODEL_DEPLOYMENT_NAME).
 SHELL := /bin/bash
 GATEWAY_DIR := gateway
 UI_DIR := ui
@@ -13,16 +14,14 @@ help:
 	@echo "make ui-build     - production build of the UI into ui/dist"
 	@echo "make verify       - UI build + Tier-1 jsdom DOM tests (render/UX gate)"
 	@echo "make test-dom     - run the Tier-1 jsdom DOM tests only"
-	@echo "make smoke        - offline end-to-end HITL smoke (LLM_MODE=mock) via the gateway"
+	@echo "make smoke        - end-to-end HITL smoke via the gateway (needs az login + Foundry)"
 	@echo "make deploy       - azd up the gateway Container App (from gateway/)"
 	@echo ""
 	@echo "Real Foundry needs: az login + FOUNDRY_PROJECT_ENDPOINT + AZURE_AI_MODEL_DEPLOYMENT_NAME"
 
 install:
 	cd $(GATEWAY_DIR) && uv venv --seed --python 3.12 .venv && \
-	  uv pip install --python .venv/bin/python --prerelease=allow \
-	    -r ../../templates/agentic-copilot-foundry/backend/requirements.txt \
-	    -r requirements.txt
+	  uv pip install --python .venv/bin/python --prerelease=allow -r requirements.txt
 	cd $(UI_DIR) && npm install
 
 gateway:
@@ -43,15 +42,14 @@ verify: ui-build test-dom
 	@echo "✓ showcase UI verified (build + DOM tests)"
 
 smoke:
-	@echo "Starting gateway in mock mode and running the HITL smoke…"
+	@echo "Starting the gateway (real hosted-agent runtime + bridge) and running the HITL smoke…"
 	@cd $(GATEWAY_DIR); \
-	  LLM_MODE=mock PORT=8080 .venv/bin/python launcher.py > /tmp/showcase-smoke.log 2>&1 & \
-	  echo $$! > /tmp/showcase-smoke.pid; \
-	  for i in $$(seq 1 40); do curl -sf http://localhost:8080/healthz >/dev/null 2>&1 && break; sleep 1; done; \
+	  PORT=8080 .venv/bin/python launcher.py > /tmp/showcase-smoke.log 2>&1 & \
+	  for i in $$(seq 1 90); do curl -sf http://localhost:8080/healthz >/dev/null 2>&1 && break; sleep 1; done; \
 	  sed 's#^BASE = .*#BASE = "http://localhost:8080/agents/agentic-copilot-foundry/"#' \
 	    ../../templates/agentic-copilot-foundry/scripts/smoke.py > /tmp/showcase-smoke.py; \
 	  .venv/bin/python /tmp/showcase-smoke.py; rc=$$?; \
-	  kill $$(cat /tmp/showcase-smoke.pid) 2>/dev/null; exit $$rc
+	  fuser -k 8080/tcp 9101/tcp 8101/tcp 2>/dev/null; exit $$rc
 
 deploy:
 	cd $(GATEWAY_DIR) && azd up

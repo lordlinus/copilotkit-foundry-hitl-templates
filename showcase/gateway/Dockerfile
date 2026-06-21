@@ -13,21 +13,24 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
 
-# Install deps first so source edits don't bust the dependency cache. The
-# gateway requirements pin the LATEST agent-framework stack and satisfy every
-# template backend (they import agent-framework / -openai / -ag-ui), so we do NOT
-# install the templates' own pinned requirements.
+# Install deps first so source edits don't bust the dependency cache. These pin
+# the templates' verified stack and cover BOTH the hosted-agent runtime
+# (ResponsesHostServer) and the AG-UI bridge that every MAF agent runs.
 COPY showcase/gateway/requirements.txt /tmp/gateway-requirements.txt
 RUN pip install --no-cache-dir --pre -r /tmp/gateway-requirements.txt
 
-# Each template backend imports its own ../src (sys.path insert in ag_ui_app.py),
-# so copy both src/ and backend/ for every featured agent.
-COPY templates/agentic-copilot-foundry/src/     ./templates/agentic-copilot-foundry/src/
-COPY templates/agentic-copilot-foundry/backend/ ./templates/agentic-copilot-foundry/backend/
-COPY templates/conversational-banking/src/      ./templates/conversational-banking/src/
-COPY templates/conversational-banking/backend/  ./templates/conversational-banking/backend/
-COPY templates/health-claim-intake/src/         ./templates/health-claim-intake/src/
-COPY templates/health-claim-intake/backend/     ./templates/health-claim-intake/backend/
+# Each MAF agent runs <template>/app.py (the ResponsesHostServer runtime, which
+# imports ../src) + backend/bridge_app.py (the AG-UI bridge). Copy app.py, src/
+# and backend/ for every featured template.
+COPY templates/agentic-copilot-foundry/app.py    ./templates/agentic-copilot-foundry/app.py
+COPY templates/agentic-copilot-foundry/src/      ./templates/agentic-copilot-foundry/src/
+COPY templates/agentic-copilot-foundry/backend/  ./templates/agentic-copilot-foundry/backend/
+COPY templates/conversational-banking/app.py     ./templates/conversational-banking/app.py
+COPY templates/conversational-banking/src/       ./templates/conversational-banking/src/
+COPY templates/conversational-banking/backend/   ./templates/conversational-banking/backend/
+COPY templates/health-claim-intake/app.py        ./templates/health-claim-intake/app.py
+COPY templates/health-claim-intake/src/          ./templates/health-claim-intake/src/
+COPY templates/health-claim-intake/backend/      ./templates/health-claim-intake/backend/
 
 # Gateway + registry.
 COPY showcase/agents.json   ./showcase/agents.json

@@ -1,12 +1,13 @@
 """Multi-agent showcase gateway.
 
-One always-on container fronts every agent in the gallery. Each template backend
-(`templates/<id>/backend/ag_ui_app.py`) runs as its OWN uvicorn process on an
-internal port (started by ``launcher.py``); this FastAPI app reverse-proxies
-``/agents/<id>/*`` to ``127.0.0.1:<port>/*`` and streams the AG-UI SSE response
-straight back to the browser.
+One always-on container fronts every agent in the gallery. Each agent runs as its
+OWN backend on an internal port (started by ``launcher.py``): MAF agents run the
+Foundry hosted-agent runtime (``ResponsesHostServer``) plus the thin AG-UI bridge
+(``bridge_app:app``); Node agents run a self-contained AG-UI backend. This FastAPI
+app reverse-proxies ``/agents/<id>/*`` to ``127.0.0.1:<port>/*`` and streams the
+AG-UI SSE response straight back to the browser.
 
-Running each backend in its own process isolates the template's global AG-UI
+Running each backend in its own process isolates the per-template AG-UI
 monkeypatches from the others, so the gallery hosts all of them without conflict
 and **without modifying any template code**.
 
