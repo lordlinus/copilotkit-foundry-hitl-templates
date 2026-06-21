@@ -57,6 +57,10 @@ jobs:
           echo "Stamped SHOWCASE_API_BASE=${API_BASE}"
 
       - uses: actions/configure-pages@v5
+        with:
+          # Auto-create the Pages site on first run (repo Pages was never enabled).
+          # Requires a plan that supports Pages on private repos (Pro/Team/Enterprise).
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
