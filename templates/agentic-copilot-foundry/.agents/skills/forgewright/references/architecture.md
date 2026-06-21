@@ -61,10 +61,13 @@ assertions (read, HITL pause, approve re-executes, reject, C9, C10).
 
 **Conclusion:** the native `FoundryAgent` client has no client-side
 `mcp_approval_response` — it cannot complete hosted HITL no matter how it's
-configured. The bridge's only job is to fill that one framework gap (call the
-hosted-agent endpoint + forward the approval) plus two ag-ui patches `make smoke`
-proves are load-bearing. Nothing else is hand-rolled; re-run this matrix on each
-package bump and delete a patch the moment the framework closes the gap.
+configured. We still use `agent-framework-ag-ui` (`add_agent_framework_fastapi_endpoint`)
+for the AG-UI translation; we just feed it a `SupportsAgentRun` shim
+(`HostedProxyAgent`) that forwards the approval, plus two ag-ui patches `make smoke`
+proves are load-bearing. Nothing else is hand-rolled. **Tracked upstream as
+[microsoft/agent-framework#6652](https://github.com/microsoft/agent-framework/issues/6652)** —
+re-run this matrix on each package bump and retire the shim + the HITL-routing patch
+the moment #6652 closes (the native `FoundryAgent` path then suffices).
 
 ## Client choice (the load-bearing rule)
 

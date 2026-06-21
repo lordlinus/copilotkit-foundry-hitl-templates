@@ -44,17 +44,31 @@ server-side — plus `azd` to deploy the hosted agent.
 
 **Why a bridge? (and why it's the *minimum*)** You can't point a CopilotKit/AG-UI
 client at a deployed Foundry hosted agent — its endpoint speaks the OpenAI
-**Responses** protocol, not AG-UI. We tested the framework's native path
-(`add_agent_framework_fastapi_endpoint(FoundryAgent(...))`) against a real hosted
-agent on the latest packages (agent-framework 1.9 / ag-ui rc5). It does a lot —
-streams text, renders tool cards, even *surfaces* the approval request — but it
-**cannot complete HITL**: on approve it never sends `mcp_approval_response` to the
-hosted agent (the client doesn't model that Responses item), so the gated tool
-never re-runs (state unchanged — verified). The bridge fills exactly that gap and
-nothing more: a thin forwarder (`HostedProxyAgent` + `hosted_client`) that calls
-the hosted-agent endpoint and forwards `mcp_approval_response`, plus two small
-ag-ui patches (HITL routing + multi-tool snapshot split) that `make smoke`
-proves are load-bearing. See `references/architecture.md` for the full test matrix.
+**Responses** protocol, not AG-UI.
+
+We **do** use the framework's AG-UI adapter — `agent-framework-ag-ui`
+(`add_agent_framework_fastapi_endpoint`) does all the AG-UI HTTP/SSE translation.
+It adapts **AG-UI ↔ a `SupportsAgentRun` agent**, and works fully when you hand it
+an **in-process `Agent`** (local tools). The catch is HITL: its approval path
+executes the approved tool **in-process** (`_resolve_approval_responses`). A
+**hosted** agent has no local tool bodies, so on approve nothing runs — verified on
+the latest packages (agent-framework 1.9 / ag-ui rc5), even with
+`FoundryAgent(allow_preview=True)`: the approval *request* surfaces, but the
+*response* is never forwarded as `mcp_approval_response`, so the gated tool never
+re-runs (state unchanged).
+
+So we don't replace `agent-framework-ag-ui` — we **feed it** a tiny
+`SupportsAgentRun` shim (`HostedProxyAgent` + `hosted_client`) that talks to the
+hosted agent over Responses and forwards `mcp_approval_response`, plus one patch
+that stops the adapter from resolving the approval locally (and a second,
+CopilotKit-v1-only, multi-tool snapshot split). `make smoke` proves both patches
+are load-bearing. See `references/architecture.md` for the full native-path matrix.
+
+> **This is tracked upstream as [microsoft/agent-framework#6652](https://github.com/microsoft/agent-framework/issues/6652).**
+> When it lands, `agent-framework-ag-ui` + `FoundryAgent` become a complete native
+> pair — `add_agent_framework_fastapi_endpoint(app, FoundryAgent(..., allow_preview=True), "/")` —
+> and the `HostedProxyAgent` shim + the HITL-routing patch can be retired (you keep
+> using `agent-framework-ag-ui`, just without the custom shim).
 
 ## Quick start
 
