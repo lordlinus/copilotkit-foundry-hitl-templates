@@ -104,6 +104,8 @@ for verb in POST GET PATCH DELETE; do
 done
 grep -rq --exclude-dir=node_modules --exclude-dir=.next 'useSingleEndpoint={false}' frontend/ && pass "<CopilotKit useSingleEndpoint={false}> set" \
   || fail "<CopilotKit useSingleEndpoint={false}> NOT set — Threads/Info will 404"
+grep -rq --exclude-dir=node_modules --exclude-dir=.next 'fetch.bind(window)' frontend/ && pass "frontend binds global fetch (CopilotKit/@ag-ui Illegal-invocation guard)" \
+  || fail "frontend does NOT bind global fetch — CopilotKit's @ag-ui HttpAgent throws 'Illegal invocation' on agent run (add the bind in app/layout.tsx)"
 
 # ── CopilotKit v2 hooks + HITL confirm_changes contract ─────────────────────
 grep -rq --exclude-dir=node_modules --exclude-dir=.next '@copilotkit/react-core/v2' frontend/ && pass "frontend uses CopilotKit v2 hooks (@copilotkit/react-core/v2)" \

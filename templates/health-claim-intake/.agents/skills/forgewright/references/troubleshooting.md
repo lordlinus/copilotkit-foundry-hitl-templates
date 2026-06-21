@@ -31,6 +31,7 @@ Each row is a real failure mode encoded as a check in `scripts/verify.sh` or
 | "Agent `<name>` not found" / Info 404 | `useSingleEndpoint` defaulted to `true` | set `<CopilotKit useSingleEndpoint={false}>`. |
 | `<CopilotKit agent>` doesn't match | name drift | keep `AGENT_NAME` == route const == provider == hosted yaml. `verify.sh` checks it. |
 | `next build` type error: `HttpAgent` missing `pendingInterrupts` | `@ag-ui/client` older than the version CopilotKit resolves | pin `@ag-ui/client` to the version `@copilotkit/runtime` depends on (e.g. `0.0.56`). |
+| Browser console: "Failed to execute 'fetch' on 'Window': Illegal invocation" (`agent_run_failed_event`); the agent never runs | CopilotKit v2 (`ɵcreateThreadStore` + `@ag-ui/client` HttpAgent) captures the global `fetch` as a bare reference and calls it with the wrong `this`; `CopilotKitCore` exposes no `fetch` option | bind the global fetch to `window` before any module loads — an inline `<head>` script in `app/layout.tsx`: `if(!window.fetch.__bound){var f=window.fetch.bind(window);f.__bound=true;window.fetch=f;}`. `verify.sh` checks it; proven in a real browser (control reproduces, fix → 0 errors). |
 
 ## Foundry connection
 
