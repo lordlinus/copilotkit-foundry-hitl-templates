@@ -22,7 +22,7 @@ backend/.env
 .cache/
 
 # showcase
-showcase/ui/dist/
+**/dist/
 showcase/gateway/.env
 **/.azure/
 showcase/ui/screenshots/
