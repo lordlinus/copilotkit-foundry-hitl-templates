@@ -12,6 +12,7 @@ Each row is a real failure mode encoded as a check in `scripts/verify.sh` or
 | Clicking Approve does nothing / tool never runs | Resolving with `{ approved }` | Resolve with `{ accepted: boolean, steps }`. Backend detection is `"accepted" in parsed`. |
 | Approve works once, next message 400s with orphaned `call_…` | (pre-rc5) stale approval payload re-sent | Handled NATIVELY on agent-framework-ag-ui rc5 — do not re-add the old hand-rolled patches. |
 | Consequential tool runs WITHOUT asking | Tool missing `approval_mode="always_require"` | Decorate the consequential tool. `verify.sh` requires at least one. |
+| ⚠️ **UNRESOLVED, discovered during a CopilotKit 1.61.2 upgrade test:** after one approve/reject, a LATER unrelated turn (e.g. a plain follow-up question) can silently re-execute the SAME already-resolved approval again — the gated tool's side effect applies more than once even though the user only clicked Approve once | `hosted_proxy.py`'s own `_find_approval_decision`/`_resolved_mcpr` guard correctly identifies the later turn as a normal turn (verified via its own `[proxy] case=... user=...` log line) — but `agent_framework_ag_ui._message_adapters` logs a SEPARATE `"Approval payload received"` for that same later turn, independent of the bridge's own logic, implying the native ag-ui package re-detects the stale approval from replayed conversation history on its own. Reproduced live: a value-mutating gated tool kept incrementing on subsequent read-only turns after one approve. Root cause NOT yet isolated (unclear whether it's triggered by more history now being sent by the newer CopilotKit client, or a latent `agent_framework_ag_ui` bug that any client could trigger with a long-enough conversation) — **do not treat multi-turn conversations after an approval as safe without further investigation**, especially for any real (non-demo) consequential action. Do not attempt a workaround in `backend/{bridge_app,hosted_proxy,hosted_client}.py` without confirming the root cause first — those files are otherwise proven correct by `make smoke`'s single-approval-cycle assertions. |
 
 ## AG-UI rendering
 
@@ -27,7 +28,7 @@ Each row is a real failure mode encoded as a check in `scripts/verify.sh` or
 > route-handler function name, whether the client defaults to single-route or
 > multi-route mode, and the provider component name (`CopilotKit` vs
 > `CopilotKitProvider`) have all changed across releases seen in the wild.
-> This template currently pins `^1.60.0` and the rows below are verified
+> This template currently pins `^1.61.2` and the rows below are verified
 > against that resolved version (see `frontend/package-lock.json`). Before
 > upgrading, re-verify each of these against the new version's own bundled
 > `.d.ts`/docs rather than assuming the shape below still holds.
