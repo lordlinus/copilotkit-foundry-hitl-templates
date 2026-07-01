@@ -54,7 +54,7 @@ assertions (read, HITL pause, approve re-executes, reject, C9, C10).
 | --- | --- |
 | **Bridge (HostedProxyAgent + 2 patches)** | **15/15** ✓ |
 | Bridge, HITL approval routing patch removed | approve does NOT change state ✗ — patch REQUIRED |
-| Bridge, `DISABLE_C9_SPLIT=1` | C9 fails (snapshot lumps >1 tool_calls) ✗ — split REQUIRED |
+| Bridge, `DISABLE_C9_SPLIT=1` | C9 fails (snapshot lumps multiple tool_calls) ✗ — split REQUIRED |
 | Native `add_agent_framework_fastapi_endpoint(FoundryAgent(...))` | 400 "Hosted agents can only be called through the agent endpoint" ✗ |
 | Native + `allow_preview=True` | surfaces the approval, but **approve does NOT re-execute** (state unchanged); C9 fails ✗ |
 | Native + `allow_preview=True` + the 2 patches | **still** approve does NOT re-execute ✗ |

@@ -14,6 +14,16 @@ Responses) is published as an **Azure AI Foundry hosted agent**. This runs from
   `azd extension install azure.ai.agents` (the template pins `>=0.1.0-preview`).
 - An `azd` environment with a region/model selected.
 
+> **Note for anyone starting a brand-new template from scratch** (not
+> customizing this one): `azd ai agent sample list` / `azd ai agent init -m
+> <manifest-url>` can scaffold a fresh `hosted/`-style project (`main.py`,
+> `agent.yaml`, `azure.yaml`, `Dockerfile`, `infra/`) for whatever `azd`
+> Foundry extension version you have installed. This template's `hosted/`
+> predates that tool and has since been hand-tuned for the dual root+`hosted/`
+> project layout below — don't regenerate it wholesale over an existing,
+> working template; only use the generator as a starting point for something
+> genuinely new.
+
 ## Deploy
 
 ```bash

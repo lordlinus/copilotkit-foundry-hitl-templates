@@ -18,10 +18,19 @@ Each row is a real failure mode encoded as a check in `scripts/verify.sh` or
 | Symptom | Cause | Fix |
 | --- | --- | --- |
 | HITL approve doesn't re-execute the tool server-side (state unchanged after approve) | ag-ui resolves `confirm_changes` **locally** before the proxy sees it | `bridge_app.py` neutralises `_is_confirm_changes_response` + `_resolve_approval_responses`, so the decision reaches `HostedProxyAgent`, which forwards `mcp_approval_response` to the hosted agent. **Proven load-bearing: disabling it → approve doesn't change state.** |
-| Approval/tool card vanishes at RUN_FINISHED when a turn made several tool calls | ag-ui's snapshot builder lumps >1 tool_calls into one assistant message; CopilotKit **v1** renders only `toolCalls[0]` | `bridge_app.py` splits multi-tool snapshot messages (`_build_messages_snapshot`); `smoke.py` C9 guards it. **Proven load-bearing: `DISABLE_C9_SPLIT=1` fails C9.** (v2 renders all tool calls, but the split keeps the snapshot correct for both frontends.) |
+| Approval/tool card vanishes at RUN_FINISHED when a turn made several tool calls | ag-ui's snapshot builder lumps multiple tool_calls into one assistant message; CopilotKit **v1** renders only `toolCalls[0]` | `bridge_app.py` splits multi-tool snapshot messages (`_build_messages_snapshot`); `smoke.py` C9 guards it. **Proven load-bearing: `DISABLE_C9_SPLIT=1` fails C9.** (v2 renders all tool calls, but the split keeps the snapshot correct for both frontends.) |
 | Replayed history 400s / orphaned tool call (C10) | raw AG-UI history replayed to the hosted agent | the proxy does **not** replay raw history — `_find_approval_decision` / `_latest_user_text` derive the turn input (latest user text, or an `mcp_approval_response`). `smoke.py` C10 asserts no error. No `normalize_*` patch needed. |
 
 ## CopilotKit bridge
+
+> **CopilotKit's API moves fast, even between minor versions** — the exact
+> route-handler function name, whether the client defaults to single-route or
+> multi-route mode, and the provider component name (`CopilotKit` vs
+> `CopilotKitProvider`) have all changed across releases seen in the wild.
+> This template currently pins `^1.60.0` and the rows below are verified
+> against that resolved version (see `frontend/package-lock.json`). Before
+> upgrading, re-verify each of these against the new version's own bundled
+> `.d.ts`/docs rather than assuming the shape below still holds.
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
@@ -32,6 +41,7 @@ Each row is a real failure mode encoded as a check in `scripts/verify.sh` or
 | `<CopilotKit agent>` doesn't match | name drift | keep `AGENT_NAME` == route const == provider == hosted yaml. `verify.sh` checks it. |
 | `next build` type error: `HttpAgent` missing `pendingInterrupts` | `@ag-ui/client` older than the version CopilotKit resolves | pin `@ag-ui/client` to the version `@copilotkit/runtime` depends on (e.g. `0.0.56`). |
 | Browser console: "Failed to execute 'fetch' on 'Window': Illegal invocation" (`agent_run_failed_event`); the agent never runs | CopilotKit v2 (`ɵcreateThreadStore` + `@ag-ui/client` HttpAgent) captures the global `fetch` as a bare reference and calls it with the wrong `this`; `CopilotKitCore` exposes no `fetch` option | bind the global fetch to `window` before any module loads — an inline `<head>` script in `app/layout.tsx`: `if(!window.fetch.__bound){var f=window.fetch.bind(window);f.__bound=true;window.fetch=f;}`. `verify.sh` checks it; proven in a real browser (control reproduces, fix → 0 errors). |
+| `useHumanInTheLoop`'s `respond(...)` payload isn't recognized by the bridge | assumed CopilotKit enforces a specific resolve shape | it doesn't — `respond(result)` accepts any value. `{ accepted, steps }` is a convention this template defines; keep the frontend `respond(...)` call and `hosted_proxy.py`'s parser in sync if you ever change it. |
 
 ## Foundry connection
 
@@ -48,6 +58,15 @@ Each row is a real failure mode encoded as a check in `scripts/verify.sh` or
 | `az acr build` fails `toomanyrequests` | Docker Hub base image | use `mcr.microsoft.com/devcontainers/...` base images. |
 | azd deploys the helloworld placeholder | ran `azd provision` only | run `make up` (= `azd up` = provision + deploy). |
 | hosted image missing `src/agent.py` | build context too narrow | `hosted/azure.yaml` sets `context: ..` (template root). |
+
+## Local dev-loop gotchas (found running `make smoke`/`make local` repeatedly)
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| `smoke.py` fails (or passes for the wrong reason) when run twice in a row, or after an interrupted earlier attempt | the example agent's in-memory data store is **process-lifetime** state — every approve/reject call from any script mutates the SAME shared data | restart `azd ai agent run` between independent verification passes to reset to the seeded starting state. Don't assume a fresh `make smoke` run starts clean if a prior run (or an interrupted session) already approved/rejected the same record ids. |
+| A new `azd ai agent run` fails with `Address already in use` (often a confusing hypercorn traceback, not a clear "port in use" message) | a previous local hosted-agent process wasn't killed cleanly and still holds the port | find and stop the old process before starting a new one (e.g. `lsof -i :8088` / `ss -ltnp \| grep 8088`). |
+| The very first request to a freshly-started local hosted agent 404s with `DeploymentNotFound`, even though `az cognitiveservices account deployment list` confirms the deployment exists and is reachable | occasional local-dev warm-up flake in the hosted runtime/SDK, not a real config problem | retry once, or restart the hosted-agent process with the same env vars — this has been observed to resolve itself immediately on retry. |
+| Approval card renders but shows the wrong/missing field after you rename a gated tool's parameter | the frontend's HITL card component parses `function_arguments` and casts to a specific field name — this must match whatever parameter name the Python tool actually takes; the bridge itself just forwards the model's raw arguments JSON verbatim | when you rename a gated tool's parameter, update the corresponding field name in the frontend's parsed-args cast to match. Presentation-only, not a bridge change. |
 
 ## Bridge (the framework-native AG-UI endpoint)
 

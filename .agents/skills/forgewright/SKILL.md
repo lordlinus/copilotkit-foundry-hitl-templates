@@ -48,6 +48,17 @@ the patterns in scope. Never declare success on an unverified build.
 - The canonical template is `templates/agentic-copilot-foundry/`. Vendored dojo
   source is under `reference/dojo/`. Read both before changing anything; do not
   reinvent the bridge, the patches, or the state machinery.
+- **External references (fetch when working on AG-UI/CopilotKit specifics not
+  already covered above):**
+  - `https://docs.ag-ui.com/llms-full.txt` — the full AG-UI protocol reference
+    (event types, message/state schemas, HttpAgent config) in one page; use it to
+    confirm exact AG-UI wire semantics instead of guessing.
+  - `https://github.com/CopilotKit/CopilotKit` — upstream CopilotKit source and
+    examples (incl. the AG-UI dojo patterns); use it to find canonical v2 hook
+    usage and generative-UI/HITL example code before hand-rolling a pattern.
+    CopilotKit also ships its own official skills via
+    `npx copilotkit@latest skills install` — worth installing alongside this
+    skill when debugging CopilotKit-specific (not bridge/hosted-agent) issues.
 
 ## 1. Scaffold (always start here)
 
@@ -143,6 +154,10 @@ bridge is roadmap.
   tool call (with `function_name`, `function_arguments`, `steps`). The frontend
   (`useHumanInTheLoop`) resolves it with `{ accepted: boolean, steps }` (NOT
   `{ approved }`). The framework's native approval flow re-executes on accept.
+  Note: CopilotKit's `respond(result)` itself accepts any value — the
+  `{ accepted, steps }` shape is this template's own convention, matched on
+  both sides (`ApprovalHitl`-equivalent component and `hosted_proxy.py`'s
+  `_find_approval_decision`); keep them in sync if you ever change it.
 
 ### CopilotKit (UI layer)
 - **v2 React hooks** (`@copilotkit/react-core/v2`): `useAgent`, `useAgentContext`,

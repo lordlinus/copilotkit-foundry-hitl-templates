@@ -37,8 +37,10 @@ agent (HITL approve re-executes; reject doesn't).
 - Update `scripts/smoke.py`'s domain prompts (`READ_PROMPT`/`ACTION_PROMPT`/`STATE_FIELD`/`READ_TOOL`) so `make smoke` still exercises HITL.
 
 `frontend/components/` (CopilotKit **v2** hooks):
-- `useRenderTool` (tool cards), `useHumanInTheLoop` (keep `{ accepted, steps }`),
-  `useFrontendTool`, `useAgent`.
+- `useRenderTool` (tool cards), `useHumanInTheLoop` (keep `{ accepted, steps }` —
+  this exact shape is this app's own convention matched in `hosted_proxy.py`'s
+  `_find_approval_decision`, not something CopilotKit enforces; keep both sides
+  in sync if you ever change it), `useFrontendTool`, `useAgent`.
 
 **Do NOT touch:** `backend/{bridge_app,hosted_proxy,hosted_client}.py`,
 `build_hosted_agent()` (FoundryChatClient) in `src/agent.py`, or the CopilotKit
