@@ -163,5 +163,54 @@ check("C10 reached RUN_FINISHED", "RUN_FINISHED" in b8)
 check("C10 no RUN_ERROR", "RUN_ERROR" not in b8)
 check("C10 no 'No tool output found'", "No tool output found" not in b8)
 
+
+# 6. C11: SAME-THREAD multi-turn after approval must NOT re-execute the gated
+# tool again. Regression test for microsoft/agent-framework#6828 / #6851 —
+# chaining previous_response_id THROUGH an approval-resolution response caused
+# the hosted runtime to silently re-run the approved tool a second time on the
+# very next turn, regardless of that turn's own content. hosted_client.py works
+# around this by not chaining forward from an approval-resolution response.
+print("6) C11: same-thread follow-up turns after approval do NOT re-execute")
+b9 = post({"threadId": "c11", "runId": "c11-1",
+           "messages": [{"id": "u1", "role": "user", "content": ACTION_PROMPT}],
+           "tools": [], "context": [], "state": {}})
+snap9 = extract_snapshot(b9)
+cid9, cargs9 = find_confirm_changes(snap9 or {})
+if cid9:
+    approval_msg9 = {"id": "approve-c11", "role": "tool", "toolCallId": cid9,
+                      "content": json.dumps({"accepted": True, "steps": cargs9.get("steps")})}
+    history9 = (snap9 or {}).get("messages", []) + [approval_msg9]
+    b10 = post({"threadId": "c11", "runId": "c11-2", "messages": history9,
+                "tools": [], "context": [], "state": {}})
+    snap10 = extract_snapshot(b10)
+    check("C11 approve run reached RUN_FINISHED", "RUN_FINISHED" in b10)
+    history_n = (snap10 or {}).get("messages", []) or history9
+    # The approve turn's own response is narrative text ("The new value is X."),
+    # not a raw tool JSON result, so parse_state(b10) isn't reliable as a
+    # baseline — take one explicit read turn first to establish a numeric
+    # baseline, THEN check that baseline holds across further same-thread turns.
+    history_n = history_n + [{"id": "u-baseline", "role": "user", "content": READ_PROMPT}]
+    b_baseline = post({"threadId": "c11", "runId": "c11-baseline", "messages": history_n,
+                        "tools": [], "context": [], "state": {}})
+    snap_baseline = extract_snapshot(b_baseline)
+    if snap_baseline:
+        history_n = snap_baseline.get("messages", [])
+    last_val = parse_state(b_baseline)
+    check("C11 established a numeric baseline right after approval", last_val is not None)
+    still_ok = last_val is not None
+    for i in range(3):
+        history_n = history_n + [{"id": f"u{i}", "role": "user", "content": f"Just checking in #{i}, {READ_PROMPT}"}]
+        b_n = post({"threadId": "c11", "runId": f"c11-follow-{i}", "messages": history_n,
+                    "tools": [], "context": [], "state": {}})
+        snap_n = extract_snapshot(b_n)
+        if snap_n:
+            history_n = snap_n.get("messages", [])
+        v_n = parse_state(b_n)
+        if v_n != last_val:
+            still_ok = False
+        last_val = v_n
+    check("C11 value unchanged across 3 same-thread follow-up turns (no re-execution)", still_ok)
+else:
+    check("C11 confirm_changes tool call captured", False)
 print()
 sys.exit(rc)

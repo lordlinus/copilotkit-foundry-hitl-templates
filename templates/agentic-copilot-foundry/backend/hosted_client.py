@@ -142,6 +142,14 @@ class HostedAgentClient:
             logger.info("[hosted] created session for case=%s -> %s", case_id, sid[:18])
             return sid
 
+    @staticmethod
+    def _is_approval_turn(agui_input: Any) -> bool:
+        """True if this turn's OWN input is resolving an mcp_approval_request."""
+        if isinstance(agui_input, list):
+            return any(isinstance(item, dict) and item.get("type") == "mcp_approval_response"
+                       for item in agui_input)
+        return False
+
     async def converse_stream(self, case_id: str, agui_input: Any,
                               previous_response_id: str | None = None):
         """STREAM a turn to the hosted agent and yield normalised events AS THEY
@@ -158,6 +166,7 @@ class HostedAgentClient:
           {"kind":"approval", "id", "name", "arguments"}
           {"kind":"error", "detail"}
         """
+        approval_turn = self._is_approval_turn(agui_input)
         if _DIRECT_URL:
             # DIRECT mode: a raw ResponsesHostServer (local `azd ai agent run`).
             # No platform version/session/conversation; chain previous_response_id
@@ -218,7 +227,24 @@ class HostedAgentClient:
                     elif t == "response.completed":
                         rid = (d.get("response", {}) or {}).get("id") or d.get("id")
                         if rid:
-                            self._last_response[case_id] = rid
+                            if approval_turn:
+                                # WORKAROUND for microsoft/agent-framework#6828 / #6851:
+                                # chaining previous_response_id THROUGH a response that
+                                # resolved an mcp_approval_response causes the hosted
+                                # runtime to silently re-execute the approved tool AGAIN
+                                # on the next turn, regardless of that turn's own content
+                                # (verified live, isolated down to raw curl against the
+                                # bare /responses endpoint — no bridge/AG-UI/CopilotKit
+                                # code involved). Do NOT chain forward from this
+                                # response; the next turn starts a fresh (stateless)
+                                # exchange instead, trading a bit of conversational
+                                # memory for the much more important guarantee that a
+                                # gated, consequential action never silently executes
+                                # twice. Remove this branch once #6851 is fixed upstream
+                                # and the agent-framework-* pins are upgraded past it.
+                                self._last_response.pop(case_id, None)
+                            else:
+                                self._last_response[case_id] = rid
                     elif t == "response.failed" or (d.get("response", {}) or {}).get("error"):
                         err = (d.get("response", {}) or {}).get("error") or d.get("error")
                         if err:
