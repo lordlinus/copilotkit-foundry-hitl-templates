@@ -38,3 +38,4 @@ test-results/
 
 # Vendored third-party reference source (research scratch; not published)
 reference/
+graphify-out/

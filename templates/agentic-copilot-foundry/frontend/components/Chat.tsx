@@ -111,6 +111,9 @@ export default function Chat() {
       if (status !== "complete") return <></>;
       const p = asPayload(result);
       if (p.status !== "ok") return <></>;
+      if (p.executed && p.value === undefined) {
+        return <div className="card resolved">Approved action executed server-side</div>;
+      }
       return <div className="card resolved">Applied - value is now {p.value}</div>;
     },
   });

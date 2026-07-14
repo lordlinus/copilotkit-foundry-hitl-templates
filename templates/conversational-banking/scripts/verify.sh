@@ -22,6 +22,8 @@ cd "$ROOT"
 [ -f hosted/responses/agent.yaml ] && pass "hosted/responses/agent.yaml present" || fail "hosted/responses/agent.yaml missing"
 [ -f hosted/responses/agent.manifest.yaml ] && pass "hosted/responses/agent.manifest.yaml present" || fail "agent.manifest.yaml missing"
 [ -f hosted/responses/Dockerfile ] && pass "hosted/responses/Dockerfile present" || fail "hosted Dockerfile missing"
+[ -f scripts/e2e_run.sh ]          && pass "scripts/e2e_run.sh present" || fail "scripts/e2e_run.sh missing"
+[ -f frontend/e2e/hitl.spec.ts ]   && pass "frontend HITL browser E2E present" || fail "frontend/e2e/hitl.spec.ts missing"
 [ -d "frontend/app/api/copilotkit/[[...slug]]" ] && pass "frontend catch-all route dir present" \
     || fail "frontend/app/api/copilotkit/[[...slug]]/ MISSING — Threads/Info will 404"
 
@@ -37,10 +39,12 @@ fi
 hosted_azure_name=$(awk '/^name:/{print $2; exit}' hosted/azure.yaml)
 hosted_agent_yaml_name=$(awk '/^name:/{print $2; exit}' hosted/responses/agent.yaml)
 hosted_manifest_name=$(awk '/^name:/{print $2; exit}' hosted/responses/agent.manifest.yaml)
-if [ -n "$hosted_azure_name" ] && [ "$hosted_azure_name" = "$hosted_agent_yaml_name" ] && [ "$hosted_azure_name" = "$hosted_manifest_name" ]; then
-  pass "hosted name consistent across azure.yaml + agent.yaml + manifest ($hosted_azure_name)"
+app_name=$(awk '/^APP_NAME[[:space:]]*:/{print $3; exit}' Makefile)
+if [ -n "$hosted_azure_name" ] && [ "$hosted_azure_name" = "$hosted_agent_yaml_name" ] \
+  && [ "$hosted_azure_name" = "$hosted_manifest_name" ] && [ "$hosted_azure_name" = "$app_name" ]; then
+  pass "hosted name consistent across Makefile + azure.yaml + agent.yaml + manifest ($hosted_azure_name)"
 else
-  fail "hosted name DRIFT: azure.yaml='$hosted_azure_name' agent.yaml='$hosted_agent_yaml_name' manifest='$hosted_manifest_name'"
+  fail "hosted name DRIFT: Makefile='$app_name' azure.yaml='$hosted_azure_name' agent.yaml='$hosted_agent_yaml_name' manifest='$hosted_manifest_name'"
 fi
 
 # ── The bridge: HostedProxyAgent → hosted agent (azd ai agent run locally) ──
@@ -53,6 +57,9 @@ grep -q 'HostedProxyAgent' backend/bridge_app.py && [ -f backend/hosted_proxy.py
 grep -q 'mcp_approval_response' backend/hosted_proxy.py \
   && pass "hosted_proxy forwards HITL approvals as mcp_approval_response (re-executes server-side)" \
   || fail "hosted_proxy does NOT send mcp_approval_response — HITL approve won't re-execute the tool"
+grep -q '_pending_calls' backend/hosted_proxy.py && grep -q '_approved_calls' backend/hosted_proxy.py \
+  && pass "hosted_proxy replays approved result-only calls for persistent UI cards" \
+  || fail "hosted_proxy missing approved-call replay — action result cards vanish after approval"
 grep -q '_is_confirm_changes_response' backend/bridge_app.py && grep -q '_resolve_approval_responses' backend/bridge_app.py \
   && pass "bridge neutralises ag-ui local approval interception (routes HITL to the agent)" \
   || fail "bridge_app does NOT patch _is_confirm_changes_response/_resolve_approval_responses — approvals swallowed locally"
@@ -106,6 +113,8 @@ grep -rq --exclude-dir=node_modules --exclude-dir=.next 'useSingleEndpoint={fals
   || fail "<CopilotKit useSingleEndpoint={false}> NOT set — Threads/Info will 404"
 grep -rq --exclude-dir=node_modules --exclude-dir=.next 'fetch.bind(window)' frontend/ && pass "frontend binds global fetch (CopilotKit/@ag-ui Illegal-invocation guard)" \
   || fail "frontend does NOT bind global fetch — CopilotKit's @ag-ui HttpAgent throws 'Illegal invocation' on agent run (add the bind in app/layout.tsx)"
+grep -q '"test:e2e"' frontend/package.json && grep -q '@playwright/test' frontend/package.json \
+  && pass "frontend exposes Playwright E2E" || fail "frontend package.json missing test:e2e/@playwright"
 
 # ── CopilotKit v2 hooks + HITL confirm_changes contract ─────────────────────
 grep -rq --exclude-dir=node_modules --exclude-dir=.next '@copilotkit/react-core/v2' frontend/ && pass "frontend uses CopilotKit v2 hooks (@copilotkit/react-core/v2)" \

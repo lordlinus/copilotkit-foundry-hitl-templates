@@ -3,7 +3,7 @@ kind: hosted
 name: health-claim-intake
 protocols:
   - protocol: responses
-    version: 1.0.0
+    version: 2.0.0
 resources:
   cpu: "1"
   memory: 0.5Gi

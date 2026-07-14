@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Tier-2 browser E2E. Renders the REAL built UI in Chromium against a gateway
-// running in mock mode (hermetic, no Azure). Catches browser-only and
+// Tier-2 browser E2E. Renders the REAL built UI in Chromium against the real
+// Foundry-backed gateway. Catches browser-only and
 // visibility/UX bugs that jsdom and SSE smoke can't (e.g. the @ag-ui/client
 // detached-fetch crash, or an approval card stuck below the fold).
 //

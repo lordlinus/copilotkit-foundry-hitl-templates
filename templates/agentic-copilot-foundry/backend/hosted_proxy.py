@@ -99,6 +99,11 @@ class HostedProxyAgent:
         self.description: str | None = "Bridge to the Foundry hosted agent."
         # case_id -> mcp_approval_request id pending the user's decision
         self._pending_mcpr: dict[str, str] = {}
+        # The gated function_call is suppressed while approval is pending. Keep it
+        # so an approved result-only resume can replay the call before its result,
+        # allowing CopilotKit useRenderTool to render the completed action card.
+        self._pending_calls: dict[str, dict] = {}
+        self._approved_calls: dict[str, dict] = {}
         # mcp_approval_request ids we've already answered (approve/reject/supersede).
         # Guards against re-sending a stale approval ("Approval request with ID ...
         # does not exist") when the frontend's lingering sign-off card is clicked
@@ -132,8 +137,11 @@ class HostedProxyAgent:
         if decision is not None:
             call_id, approved = decision
             mcpr = self._pending_mcpr.pop(case, None) or call_id
+            pending_call = self._pending_calls.pop(case, None)
             if mcpr and mcpr not in self._resolved_mcpr:  # never send empty/stale id
                 self._resolved_mcpr.add(mcpr)
+                if approved and pending_call is not None:
+                    self._approved_calls[case] = pending_call
                 logger.info("[proxy] case=%s approval=%s mcpr=%s", case, approved, mcpr[:14])
                 return [{"type": "mcp_approval_response", "approval_request_id": mcpr, "approve": approved}]
             # mcpr empty, or already answered (e.g. the user clicked the lingering
@@ -144,6 +152,7 @@ class HostedProxyAgent:
         text = _latest_user_text(messages)
         pending = self._pending_mcpr.pop(case, None)
         if pending and pending not in self._resolved_mcpr:
+            self._pending_calls.pop(case, None)
             # An approval is still pending server-side but the user sent a normal
             # message instead of approving. The conversation is BLOCKED awaiting an
             # mcp_approval_response — sending plain text 400s ("invalid_payload").
@@ -169,6 +178,11 @@ class HostedProxyAgent:
         buffer each function_call and drop it if the next event is its approval.
         """
         agui_input = self._stream_input(case, messages)
+        approved_call = self._approved_calls.pop(case, None)
+        approved_original_id = approved_call.get("call_id") if approved_call else None
+        approved_ui_call_id: str | None = None
+        approved_result_seen = False
+        approval_error: str | None = None
         last_call_id = ""
         pending_fc: dict | None = None  # a function_call awaiting its next event
 
@@ -176,10 +190,17 @@ class HostedProxyAgent:
             return Content.from_function_call(call_id=fc["call_id"], name=fc.get("name", ""),
                                               arguments=fc.get("arguments", ""))
 
+        if approved_call is not None:
+            approved_call = dict(approved_call)
+            approved_ui_call_id = f"{approved_call['call_id']}-approved-{uuid4().hex[:8]}"
+            approved_call["call_id"] = approved_ui_call_id
+            yield (_fc_content(approved_call), True)
+
         async for ev in hosted_client.client().converse_stream(case, agui_input):
             kind = ev.get("kind")
             # An approval right after a function_call → drop the call, show only the card.
             if kind == "approval" and pending_fc is not None:
+                self._pending_calls[case] = pending_fc
                 pending_fc = None
             elif pending_fc is not None:
                 # the buffered call was NOT gated → flush it as a real tool call
@@ -188,10 +209,14 @@ class HostedProxyAgent:
                 pending_fc = None
 
             if kind == "function_call":
+                if approved_original_id and ev.get("call_id") == approved_original_id:
+                    continue
                 pending_fc = {"call_id": ev.get("call_id") or uuid4().hex,
                               "name": ev.get("name", ""), "arguments": ev.get("arguments", "")}
             elif kind == "result":
-                cid = ev.get("call_id") or last_call_id or uuid4().hex
+                cid = approved_ui_call_id or ev.get("call_id") or last_call_id or uuid4().hex
+                if approved_ui_call_id:
+                    approved_result_seen = True
                 yield (Content.from_function_result(call_id=cid, result=ev.get("output")), False)
             elif kind == "approval":
                 mcpr = ev.get("id") or uuid4().hex
@@ -204,7 +229,20 @@ class HostedProxyAgent:
             elif kind == "text":
                 yield (Content.from_text(ev.get("delta", "")), False)
             elif kind == "error":
+                if approved_ui_call_id:
+                    approval_error = str(ev.get("detail") or "Hosted tool execution failed")
                 yield (Content.from_text(f"\n\n_(hosted agent error: {ev.get('detail')})_"), True)
+
+        if approved_ui_call_id and not approved_result_seen:
+            result = (
+                {"status": "error", "reason": approval_error}
+                if approval_error
+                else {"status": "ok", "executed": True}
+            )
+            yield (Content.from_function_result(
+                call_id=approved_ui_call_id,
+                result=json.dumps(result, ensure_ascii=False),
+            ), False)
 
         if pending_fc is not None:  # trailing function_call with no following event
             yield (_fc_content(pending_fc), True)

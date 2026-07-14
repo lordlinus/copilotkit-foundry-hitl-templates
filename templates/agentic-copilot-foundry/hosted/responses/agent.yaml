@@ -3,7 +3,7 @@ kind: hosted
 name: agentic-copilot-foundry
 protocols:
   - protocol: responses
-    version: 1.0.0
+    version: 2.0.0
 resources:
   cpu: "1"
   memory: 0.5Gi

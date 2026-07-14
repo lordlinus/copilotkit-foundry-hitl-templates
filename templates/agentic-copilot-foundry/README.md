@@ -18,6 +18,7 @@ The demo agent holds a single numeric value: `get_value` reads it (no approval);
 # Run the REAL agent locally (needs `az login` + a provisioned project — see `make up`):
 make smoke        # bridge → REAL agent via `azd ai agent run`; asserts the HITL flow
 make verify       # read-only structural checks
+make e2e          # built CopilotKit UI in Chromium: read/reject/approve/follow-up
 
 # Local dev loop:
 make local        # REAL agent (azd ai agent run) + bridge :8080 + frontend :3000
@@ -54,11 +55,12 @@ Open http://localhost:3000 and try: *"what's the current value?"* then
 | `make local` | run bridge + frontend |
 | `make verify` | read-only structural checks |
 | `make smoke` | end-to-end HITL test against the REAL agent (`azd ai agent run`) |
+| `make e2e` | real-browser HITL journey against the REAL agent |
 | `make up` / `make deploy` | `azd up` / `azd deploy` the hosted agent |
 | `make clean` | remove venv / node_modules / .next |
 
 ## Definition of Done
 
-Not done until `make verify` **and** `make smoke` are green, and — for the deployed
+Not done until `make verify`, `make smoke`, **and** `make e2e` are green, and — for the deployed
 path — a live browser E2E shows HITL approve re-executing (state changes) and reject
-not. See `.agents/skills/forgewright/SKILL.md`.
+not. See `.agents/skills/copilotkit-foundry-hitl/SKILL.md`.

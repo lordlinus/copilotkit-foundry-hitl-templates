@@ -119,6 +119,9 @@ export default function Chat() {
       if (status !== "complete") return <></>;
       const p = asPayload(result);
       if (p.status !== "ok") return <></>;
+      if (p.executed && p.reference === undefined) {
+        return <div className="card resolved">Approved claim submission executed server-side</div>;
+      }
       return (
         <div className="card resolved">
           Claim filed - reference <strong>{p.reference}</strong>

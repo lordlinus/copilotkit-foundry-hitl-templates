@@ -3,8 +3,8 @@
 # It needs agent-framework-core (Content types) + ag-ui (the AG-UI endpoint) +
 # httpx (the Responses driver; PINNED stable — prerelease pulls httpx 1.0.dev with
 # no AsyncClient) + aiohttp (async transport for DefaultAzureCredential.aio).
-agent-framework-core==1.9.0
-agent-framework-ag-ui==1.0.0rc5
+agent-framework-core==1.11.0
+agent-framework-ag-ui==1.0.0rc8
 httpx==0.28.1
 aiohttp>=3.10.0
 azure-identity>=1.19.0

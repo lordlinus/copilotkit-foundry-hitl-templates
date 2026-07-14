@@ -44,6 +44,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ vars.FOUNDRY_PROJECT_ENDPOINT != '' }}
     runs-on: ubuntu-latest
     env:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -56,6 +57,7 @@ jobs:
       FOUNDRY_PROJECT_ENDPOINT: ${{ vars.FOUNDRY_PROJECT_ENDPOINT }}
       AZURE_AI_MODEL_DEPLOYMENT_NAME: ${{ vars.AZURE_AI_MODEL_DEPLOYMENT_NAME }}
       ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
+      GH_PAT: ${{ secrets.GH_PAT }}
     steps:
       - uses: actions/checkout@v4
 
@@ -97,10 +99,10 @@ jobs:
       # it. Requires a repo/fine-grained PAT secret `GH_PAT` with `variables:write`
       # + `actions:write` (the default GITHUB_TOKEN cannot set variables).
       - name: Stamp API_BASE and trigger Pages
-        if: ${{ secrets.GH_PAT != '' }}
+        if: ${{ env.GH_PAT != '' }}
         working-directory: showcase/gateway
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ env.GH_PAT }}
         run: |
           FQDN=$(azd env get-value SERVICE_GATEWAY_FQDN 2>/dev/null || true)
           if [ -n "$FQDN" ]; then

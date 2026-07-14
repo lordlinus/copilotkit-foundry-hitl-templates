@@ -25,6 +25,7 @@ extraction in `src/agent.py` with a real OCR / document-intelligence pipeline.
 # Run the REAL agent locally (needs `az login` + a provisioned project — see `make up`):
 make smoke        # bridge → REAL agent via `azd ai agent run`; asserts the HITL flow
 make verify       # read-only structural checks
+make e2e          # built CopilotKit UI in Chromium: read/reject/approve/follow-up
 
 # Local dev loop (needs a Foundry project + `az login`):
 cp backend/.env.example backend/.env       # set FOUNDRY_PROJECT_ENDPOINT + model
@@ -59,11 +60,12 @@ Open http://localhost:3000 and try: *"list the documents"* →
 | `make local` | run bridge + frontend |
 | `make verify` | read-only structural checks |
 | `make smoke` | end-to-end HITL test against the REAL agent (`azd ai agent run`) |
+| `make e2e` | real-browser HITL journey against the REAL agent |
 | `make up` / `make deploy` | `azd up` / `azd deploy` the hosted agent |
 | `make clean` | remove venv / node_modules / .next |
 
 ## Definition of Done
 
-Not done until `make verify` **and** `make smoke` are green, and — for the deployed
+Not done until `make verify`, `make smoke`, **and** `make e2e` are green, and — for the deployed
 path — a live browser E2E shows HITL approve re-executing and reject not. See
-`.agents/skills/forgewright/SKILL.md`.
+`.agents/skills/copilotkit-foundry-hitl/SKILL.md`.

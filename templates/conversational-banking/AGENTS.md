@@ -5,9 +5,11 @@ CopilotKit chat UI over a FastAPI + AG-UI (SSE) backend hosting one Microsoft
 Agent Framework agent, connected keyless to Azure AI Foundry, with native
 human-in-the-loop approval.
 
-**Load `.agents/skills/forgewright/SKILL.md`** before changing agent or bridge
-code — it lists the load-bearing rules, the known traps, and the Definition of
-Done.
+**For changing agent or bridge code, load
+`.agents/skills/copilotkit-foundry-hitl/SKILL.md`** — the Day-2 dev skill lists the
+load-bearing rules, the known traps, the Definition of Done, and step-by-step
+workflows (add-tool, wire-hitl, debug-hitl, shared-state, upgrade-loop).
+`.agents/skills/forgewright/SKILL.md` is the quick app-specific guide.
 
 ## Where to make changes
 
@@ -27,6 +29,6 @@ bridge in `frontend/app/api/copilotkit/[[...slug]]/route.ts`.
 
 ## Prove it
 
-`make verify` (structural) and `make smoke` (bridge → REAL agent via `azd ai agent
-run`; needs `az login` + a provisioned project) must both pass. `azd`/dev-server
-starting is not proof.
+`make verify` (structural), `make smoke` (protocol), and `make e2e` (real Chromium
+UI) must pass. The latter two drive the REAL agent via `azd ai agent run` and need
+`az login` + a provisioned project. `azd`/dev-server starting is not proof.

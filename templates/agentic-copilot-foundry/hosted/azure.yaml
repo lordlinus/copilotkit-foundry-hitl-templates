@@ -8,9 +8,14 @@ requiredVersions:
 name: agentic-copilot-foundry
 services:
     agentic-copilot-foundry:
-        # Build context is the TEMPLATE ROOT (one level up) so the shared src/
-        # agent is included alongside hosted/responses/.
-        project: ..
+        # project MUST NOT be ".." — azd (>=1.27) rejects any service path that
+        # traverses outside the project directory ("relative path must not contain
+        # '..'"). Keep project at "." (this dir) and point the Docker build context
+        # at the template root separately via docker.context so the image can still
+        # include the shared src/agent.py; tell the CLI where agent.yaml actually
+        # lives via config.agentDefinitionPath (mirrors the AGENT_DEFINITION_PATH
+        # env var) since it's no longer directly under project.
+        project: .
         host: azure.ai.agent
         language: docker
         docker:
@@ -18,6 +23,7 @@ services:
             path: hosted/responses/Dockerfile
             context: ..
         config:
+            agentDefinitionPath: responses/agent.yaml
             container:
                 resources:
                     cpu: "1"

@@ -5,7 +5,7 @@ UV    ?= uv
 VENV  := backend/.venv
 BPY   := $(VENV)/bin/python
 
-.PHONY: help preflight install local verify smoke up deploy clean
+.PHONY: help preflight install local verify smoke e2e up deploy clean
 
 help:
 	@echo "forgewright app ($(APP_NAME)) — targets:"
@@ -13,6 +13,7 @@ help:
 	@echo "  make local      azd ai agent run (:8088) -> AG-UI bridge/proxy (:8080) -> Next.js UI (:3000)"
 	@echo "  make verify     read-only structural checks (no network)"
 	@echo "  make smoke      end-to-end HITL test against the REAL agent (azd ai agent run)"
+	@echo "  make e2e        Chromium UI test against the REAL agent (read/reject/approve/follow-up)"
 	@echo "  make up         deploy hosted Foundry agent via azd (needs az login)"
 	@echo "  make clean      remove venvs / node_modules / .next"
 
@@ -34,6 +35,9 @@ verify:
 
 smoke: install
 	@bash scripts/smoke_run.sh
+
+e2e: install
+	@bash scripts/e2e_run.sh
 
 up:
 	@cd hosted && azd up

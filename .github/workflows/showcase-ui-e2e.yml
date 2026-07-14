@@ -83,7 +83,7 @@ jobs:
           PORT=8080 .venv/bin/python launcher.py > /tmp/gateway.log 2>&1 &
           for i in $(seq 1 90); do curl -sf http://localhost:8080/healthz && break; sleep 2; done
 
-      # UI — build + preview, then E2E in Chromium against the mock gateway.
+      # UI — build + preview, then E2E in Chromium against the real gateway.
       - name: Build UI
         working-directory: showcase/ui
         env:

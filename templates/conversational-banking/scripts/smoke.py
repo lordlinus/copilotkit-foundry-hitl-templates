@@ -121,6 +121,19 @@ if confirm_id and confirm_args is not None:
     check("approval run reached RUN_FINISHED", "RUN_FINISHED" in b4)
     check("no RUN_ERROR after approve", "RUN_ERROR" not in b4)
     check("no 'No tool output found' (C10 regression)", "No tool output found" not in b4)
+    approved_snap = extract_snapshot(b4) or {}
+    action_name = confirm_args.get("function_name")
+    action_ids = {
+        tc.get("id")
+        for m in approved_snap.get("messages", [])
+        for tc in (m.get("toolCalls") or [])
+        if tc.get("function", {}).get("name") == action_name
+    }
+    action_result = any(
+        m.get("role") == "tool" and (m.get("toolCallId") or m.get("tool_call_id")) in action_ids
+        for m in approved_snap.get("messages", [])
+    )
+    check("C12: approved action call + result survive the final snapshot", bool(action_ids) and action_result)
     b5 = post({"threadId": "s2re", "runId": "s2re",
                "messages": [{"id": "m", "role": "user", "content": READ_PROMPT}],
                "tools": [], "context": [], "state": {}})

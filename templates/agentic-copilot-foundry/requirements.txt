@@ -6,9 +6,12 @@
 # HITL (mcp_approval_response resume re-executes the tool; Chat Completions 500s).
 # mcp is imported by agent_framework_foundry_hosting._responses (McpError) and is
 # NOT pulled transitively on the remote build — must be explicit.
-agent-framework-core==1.9.0
-agent-framework-foundry==1.8.2
-agent-framework-foundry-hosting==1.0.0a260618
+# agent-framework-foundry-hosting is on the Foundry hosted-agent protocol v2.0
+# (breaking vs 1.0.0 — PR microsoft/agent-framework#6811); agent.manifest.yaml /
+# agent.yaml must declare protocol 2.0.0 to match (see hosted/responses/).
+agent-framework-core==1.11.0
+agent-framework-foundry==1.10.1
+agent-framework-foundry-hosting==1.0.0a260709
 mcp>=1.24.0,<2
 azure-identity>=1.19.0
 python-dotenv>=1.0.0

@@ -117,6 +117,9 @@ export default function Chat() {
         return <div className="card resolved">Transaction blocked - {p.reason}</div>;
       return <></>;
     }
+    if (p.executed && p.reference === undefined) {
+      return <div className="card resolved">Approved transaction executed server-side</div>;
+    }
     return (
       <div className="card resolved">
         {p.type === "bill_pay" ? "Bill paid" : "Transfer complete"} - {money(p.amount)} - ref{" "}

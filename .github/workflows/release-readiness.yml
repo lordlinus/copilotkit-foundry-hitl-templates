@@ -1,0 +1,79 @@
+name: Release readiness
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gallery:
+    name: Gallery and publishable skill
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: make check
+      - run: make release-check
+
+  templates:
+    name: Build ${{ matrix.template }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        template:
+          - agentic-copilot-foundry
+          - conversational-banking
+          - health-claim-intake
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: templates/${{ matrix.template }}/frontend/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Structural verification
+        run: make -C templates/${{ matrix.template }} verify
+      - name: Python syntax
+        run: >-
+          python -m compileall -q
+          templates/${{ matrix.template }}/src
+          templates/${{ matrix.template }}/backend
+          templates/${{ matrix.template }}/hosted/responses
+          templates/${{ matrix.template }}/scripts/smoke.py
+      - name: Install frontend
+        working-directory: templates/${{ matrix.template }}/frontend
+        run: npm ci
+      - name: Build frontend
+        working-directory: templates/${{ matrix.template }}/frontend
+        run: npm run build
+      - name: Compile browser E2E
+        working-directory: templates/${{ matrix.template }}/frontend
+        run: npx playwright test --list
+
+  fresh-scaffold:
+    name: Fresh installed-skill scaffold
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Scaffold only from skill contents
+        run: |
+          tmp="$(mktemp -d)"
+          bash .agents/skills/forgewright/scripts/new-app.sh release-proof "$tmp"
+          make -C "$tmp/release-proof" verify
+          cd "$tmp/release-proof/frontend"
+          npm ci
+          npm run build
+          npx playwright test --list

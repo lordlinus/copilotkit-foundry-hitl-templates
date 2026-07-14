@@ -26,8 +26,9 @@ A template is a complete, runnable app:
 | `hosted/azure.yaml`, `hosted/responses/{main.py,Dockerfile,agent.yaml,agent.manifest.yaml}` | azd → Foundry hosted agent |
 | `frontend/` | Next.js + CopilotKit v2 (catch-all route, `useSingleEndpoint={false}`, `useHumanInTheLoop`/`confirm_changes`) |
 | `scripts/verify.sh`, `scripts/smoke.py`, `scripts/smoke_run.sh`, `scripts/lib-agentrun.sh`, `scripts/lib.sh` | the proof |
+| `frontend/e2e/hitl.spec.ts`, `frontend/playwright.config.ts`, `scripts/e2e_run.sh` | real-browser proof of read + approve + reject + follow-up |
 | `Makefile` + `Makefile.targets`, `run-local.sh`, `README.md`, `.gitignore` | flow + docs |
-| `AGENTS.md`, `.agents/skills/forgewright/SKILL.md` (+ `references/`), `.mcp.json` | self-contained agent guidance |
+| `AGENTS.md`, `.agents/skills/forgewright/SKILL.md` (scaffold on-ramp), `.agents/skills/copilotkit-foundry-hitl/` (Day-2 dev skill: `SKILL.md` + `references/` + `workflows/`, synced), `.mcp.json` | self-contained agent guidance |
 
 ## Non-negotiables (the compatibility contract)
 
@@ -48,8 +49,12 @@ A template MUST NOT break these — `scripts/verify.sh` checks them:
 5. **The HITL contract**: `confirm_changes` surfaced; UI resolves via
    `useHumanInTheLoop` with `{accepted, steps}`.
 6. **MCR base images** (never Docker Hub).
-7. **A `make smoke`** (bridge → REAL agent via `azd ai agent run`) that proves read + pause + approve + reject + C9 + C10.
-8. **Name consistency** across agent.py / route / provider / hosted yaml.
+7. **A `make smoke`** (bridge → REAL agent via `azd ai agent run`) that proves read
+   + pause + approve + reject + C9/C10/C11/C12 (including persistent approved-action
+   cards in the final snapshot).
+8. **A `make e2e`** that drives the built CopilotKit UI in Chromium through read,
+   approve, reject, and a same-thread post-approval follow-up.
+9. **Name consistency** across agent.py / route / provider / hosted yaml.
 
 ## After changes
 

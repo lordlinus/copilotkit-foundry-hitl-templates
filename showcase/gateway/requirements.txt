@@ -6,13 +6,13 @@
 # Re-run `make smoke` after any bump.
 
 # ── Hosted-agent runtime (ResponsesHostServer = <template>/app.py) ────────────
-agent-framework-core==1.9.0
-agent-framework-foundry==1.8.2
-agent-framework-foundry-hosting==1.0.0a260618
+agent-framework-core==1.11.0
+agent-framework-foundry==1.10.1
+agent-framework-foundry-hosting==1.0.0a260709
 mcp>=1.24.0,<2
 
 # ── AG-UI bridge (bridge_app:app, DIRECT mode -> the runtime) ─────────────────
-agent-framework-ag-ui==1.0.0rc5
+agent-framework-ag-ui==1.0.0rc8
 httpx==0.28.1
 aiohttp>=3.10.0
 

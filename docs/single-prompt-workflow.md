@@ -10,16 +10,17 @@ How a coding agent turns one sentence into a verified, running app.
 ## What the agent does (and you can do by hand)
 
 1. **Load the skill.** `AGENTS.md` points to
-   `.agents/skills/forgewright/SKILL.md`. Read it — it is the build recipe, the
-   load-bearing rules, the anti-patterns, and the Definition of Done.
+   `.agents/skills/forgewright/SKILL.md` — the scaffold on-ramp. It hands off to the
+   `copilotkit-foundry-hitl` skill (the load-bearing rules, the known traps, the 7
+   patterns, and the Day-2 workflows) for everything after the initial customization.
 
 2. **Scaffold.**
    ```bash
-   scripts/new-app.sh product-orderer ~/projects
+   bash <forgewright-skill-dir>/scripts/new-app.sh product-orderer ~/projects
    ```
-   This copies the canonical template into `~/projects/product-orderer/` and
-   rewrites the agent-name tokens. The result already runs and already passes
-   `make smoke`.
+   This extracts the skill's bundled canonical template into
+   `~/projects/product-orderer/` and rewrites the agent-name tokens. No gallery
+   checkout is required.
 
 3. **Customize — only the extension points.** In `src/agent.py`:
    - Set `_INSTRUCTIONS` for the catalog/order domain.
@@ -39,13 +40,20 @@ How a coding agent turns one sentence into a verified, running app.
    cd ~/projects/product-orderer
    make verify     # structural checks
    make smoke      # end-to-end HITL against the REAL agent (azd ai agent run)
+   make e2e        # real browser: read, approve, reject, follow-up after approval
    ```
-   Both must be green. This is the bar for "done". `make smoke` needs `az login` +
+   All three must be green. This is the bar for "done". `make smoke`/`make e2e`
+   need `az login` +
    a provisioned Foundry project (`make up` once).
 
 5. **Run / deploy (optional).** `make local` for the dev loop; set
    `FOUNDRY_PROJECT_ENDPOINT` + `AZURE_AI_MODEL_DEPLOYMENT_NAME` and
    `make up` to publish the hosted Foundry agent.
+
+6. **Continue development.** For any change beyond the initial customization — a new
+   tool, a new approval, shared state, a bug, an upgrade — load
+   `.agents/skills/copilotkit-foundry-hitl/SKILL.md` and pick the matching workflow
+   (add-tool, wire-hitl, debug-hitl, shared-state, upgrade-loop).
 
 ## Why this is reliable
 

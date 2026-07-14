@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 
-// End-to-end in a real browser against the built UI + a mock-mode gateway.
+// End-to-end in a real browser against the built UI + real Foundry-backed gateway.
 // Proves the user-visible HITL flow for each agent and screenshots it.
 
 const SHOT_DIR = "screenshots";
