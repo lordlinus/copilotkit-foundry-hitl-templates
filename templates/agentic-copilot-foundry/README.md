@@ -26,8 +26,9 @@ make local        # REAL agent (azd ai agent run) + bridge :8080 + frontend :300
 # Deploy the Foundry HOSTED agent (needs az login to the Foundry tenant):
 make up
 
-# Drive the DEPLOYED agent from the bridge (rich UI + working HITL):
-#   set FOUNDRY_PROJECT_ENDPOINT + HOSTED_AGENT_NAME, then run the bridge.
+# Deploy the bridge + frontend as two Container Apps, wired keyless to the
+# agent `make up` just deployed (needs `make up` first):
+make up-app
 ```
 
 Open http://localhost:3000 and try: *"what's the current value?"* then
@@ -45,6 +46,7 @@ Open http://localhost:3000 and try: *"what's the current value?"* then
 | `frontend/app/page.tsx` | `<CopilotKit useSingleEndpoint={false} agent=...>`. |
 | `frontend/components/Chat.tsx` | CopilotKit v2 cards: `useHumanInTheLoop` (HITL) + `useRenderTool`. **Edit render cards.** |
 | `hosted/` | `azd` → Foundry hosted agent (Responses). `build_hosted_agent()`. |
+| `deploy/` | `azd` → the bridge + frontend as two Container Apps (`make up-app`), wired keyless to the deployed hosted agent. |
 | `scripts/verify.sh`, `scripts/smoke.py` | The proof: structural + end-to-end vs the real local agent. |
 
 ## Scripts (make targets)
@@ -57,6 +59,7 @@ Open http://localhost:3000 and try: *"what's the current value?"* then
 | `make smoke` | end-to-end HITL test against the REAL agent (`azd ai agent run`) |
 | `make e2e` | real-browser HITL journey against the REAL agent |
 | `make up` / `make deploy` | `azd up` / `azd deploy` the hosted agent |
+| `make up-app` / `make deploy-app` | `azd up` / `azd deploy` the bridge + frontend Container Apps (`deploy/`) |
 | `make clean` | remove venv / node_modules / .next |
 
 ## Definition of Done

@@ -5,7 +5,7 @@ UV    ?= uv
 VENV  := backend/.venv
 BPY   := $(VENV)/bin/python
 
-.PHONY: help preflight install local verify smoke e2e up deploy clean
+.PHONY: help preflight install local verify smoke e2e up deploy up-app deploy-app clean
 
 help:
 	@echo "forgewright app ($(APP_NAME)) — targets:"
@@ -15,6 +15,8 @@ help:
 	@echo "  make smoke      end-to-end HITL test against the REAL agent (azd ai agent run)"
 	@echo "  make e2e        Chromium UI test against the REAL agent (read/reject/approve/follow-up)"
 	@echo "  make up         deploy hosted Foundry agent via azd (needs az login)"
+	@echo "  make up-app     deploy the bridge + frontend as Container Apps via azd (needs 'make up' first)"
+	@echo "  make deploy-app redeploy the bridge + frontend after a code change (skips provisioning)"
 	@echo "  make clean      remove venvs / node_modules / .next"
 
 install:
@@ -44,6 +46,12 @@ up:
 
 deploy:
 	@cd hosted && azd deploy
+
+up-app:
+	@cd deploy && azd up
+
+deploy-app:
+	@cd deploy && azd deploy
 
 clean:
 	@rm -rf $(VENV) frontend/node_modules frontend/.next backend/__pycache__ src/__pycache__

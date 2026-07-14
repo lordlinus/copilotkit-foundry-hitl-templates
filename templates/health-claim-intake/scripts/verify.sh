@@ -136,11 +136,37 @@ grep -qE '^FROM[[:space:]]+mcr\.microsoft\.com/' hosted/responses/Dockerfile \
   && pass "hosted Dockerfile uses MCR base" || fail "hosted Dockerfile NOT MCR base"
 grep -qE '^FROM[[:space:]]+mcr\.microsoft\.com/' backend/Dockerfile \
   && pass "backend Dockerfile uses MCR base" || fail "backend Dockerfile NOT MCR base"
+grep -qE '^FROM[[:space:]]+mcr\.microsoft\.com/' frontend/Dockerfile \
+  && pass "frontend Dockerfile uses MCR base" || fail "frontend Dockerfile NOT MCR base"
 
 # ── azure.yaml host + extension pin ─────────────────────────────────────────
 grep -q 'host:[[:space:]]*azure\.ai\.agent' hosted/azure.yaml \
   && pass "azure.yaml uses host: azure.ai.agent" || fail "azure.yaml MUST declare host: azure.ai.agent"
 grep -q 'azure\.ai\.agents' hosted/azure.yaml \
   && pass "azure.ai.agents extension pinned" || warn "azure.ai.agents extension not pinned in azure.yaml"
+
+# ── deploy/: bridge + frontend as Container Apps (the piece hosted/ doesn't cover) ─
+[ -f deploy/azure.yaml ]              && pass "deploy/azure.yaml present (bridge + frontend Container Apps)" \
+  || fail "deploy/azure.yaml missing — no automated way to deploy the bridge/frontend"
+[ -f deploy/infra/main.bicep ]        && pass "deploy/infra/main.bicep present" || fail "deploy/infra/main.bicep missing"
+[ -f deploy/infra/workload.bicep ]    && pass "deploy/infra/workload.bicep present" || fail "deploy/infra/workload.bicep missing"
+grep -q 'host:[[:space:]]*containerapp' deploy/azure.yaml \
+  && pass "deploy/azure.yaml declares host: containerapp for bridge + frontend" \
+  || fail "deploy/azure.yaml MUST declare host: containerapp"
+grep -qE '^\s*bridge:' deploy/azure.yaml && grep -qE '^\s*frontend:' deploy/azure.yaml \
+  && pass "deploy/azure.yaml defines both the bridge and frontend services" \
+  || fail "deploy/azure.yaml missing the bridge or frontend service"
+grep -q 'eed3b665-ab3a-47b6-8f48-c9382fb1dad6' deploy/infra/main.bicep \
+  && pass "deploy grants the bridge identity the Foundry Agent Consumer role (least-privilege agent access)" \
+  || fail "deploy/infra/main.bicep missing the Foundry Agent Consumer role assignment — bridge can't call the hosted agent"
+grep -q 'FOUNDRY_PROJECT_ENDPOINT' deploy/infra/workload.bicep && grep -q 'HOSTED_AGENT_NAME' deploy/infra/workload.bicep \
+  && pass "bridge Container App is wired with FOUNDRY_PROJECT_ENDPOINT + HOSTED_AGENT_NAME" \
+  || fail "deploy/infra/workload.bicep missing bridge env wiring to the hosted agent"
+grep -q 'AG_UI_BACKEND_URL' deploy/infra/workload.bicep \
+  && pass "frontend Container App is wired with AG_UI_BACKEND_URL (points at the bridge)" \
+  || fail "deploy/infra/workload.bicep missing frontend->bridge wiring"
+grep -qE 'external:\s*false' deploy/infra/workload.bicep \
+  && pass "bridge Container App ingress is internal-only (not exposed to the public internet)" \
+  || warn "bridge Container App ingress may be externally exposed — confirm this is intended"
 
 finish

@@ -1,0 +1,6 @@
+{
+  "app_name": "my-agentic-app",
+  "_copy_without_render": [
+    "frontend/app/layout.tsx"
+  ]
+}

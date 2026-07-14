@@ -1,0 +1,13 @@
+"""Print next-steps guidance after generating {{ cookiecutter.app_name }}."""
+print()
+print("✓ created ./{{ cookiecutter.app_name }}")
+print("  runtime agent name : {{ cookiecutter.app_name.replace('-', '_') }}")
+print("  next:")
+print("    1. cd {{ cookiecutter.app_name }}")
+print("    2. edit src/agent.py        (instructions + your read & approval-gated tools)")
+print("    3. edit frontend/components/Chat.tsx  (render cards for your tools)")
+print("    4. update scripts/smoke.py and frontend/e2e/hitl.spec.ts for those tools")
+print("    5. make verify              (offline structural gate)")
+print("    6. make smoke && make e2e   (real agent; needs Azure login + a provisioned project)")
+print("    7. make up                  (deploy the hosted Foundry agent via azd)")
+print("    8. make up-app              (deploy the bridge + frontend Container Apps via azd)")

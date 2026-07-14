@@ -63,9 +63,12 @@ make e2e        # built CopilotKit UI in Chromium — read; reject; approve; sam
 ```bash
 make local      # frontend :3000 + bridge :8080 → REAL agent local (azd ai agent run)
 make up         # azd → deploy the Foundry HOSTED agent (build_hosted_agent / FoundryChatClient)
+make up-app     # azd → deploy the bridge + frontend as Container Apps (deploy/), wired
+                # keyless to the agent `make up` just deployed
 ```
 
-Deployed UI: run the bridge with `FOUNDRY_PROJECT_ENDPOINT` + `HOSTED_AGENT_NAME` →
-`HostedProxyAgent` drives the deployed agent. Then a **live browser E2E** — the real
-DoD: HITL approve (re-executes, state changes) AND reject (no change), plus
-tool-render cards.
+Deployed UI: `make up-app` provisions the bridge (internal-only Container App, granted
+the `Foundry Agent Consumer` role on the Foundry account) + the frontend (public
+Container App) — `HostedProxyAgent` drives the deployed agent. Then a **live browser
+E2E** — the real DoD: HITL approve (re-executes, state changes) AND reject (no
+change), plus tool-render cards.

@@ -35,9 +35,11 @@ and `make e2e` (real Chromium) pass. Never declare success on an unverified buil
 
 ## 0. Orient
 
-- This skill is self-contained: `assets/agentic-copilot-foundry.tar.gz` contains the
-  canonical template, and `scripts/new-app.sh` instantiates it. It does not depend on
-  a checkout of the forgewright gallery.
+- This skill is self-contained: `assets/agentic-copilot-foundry.tar.gz` is a
+  **Cookiecutter** template (`cookiecutter.json` + hooks) instantiated by
+  `scripts/new-app.sh` via `uvx cookiecutter` (requires `uv` —
+  https://docs.astral.sh/uv/ — no persistent install). It does not depend on a
+  checkout of the forgewright gallery.
 - The deep stack knowledge lives in the sibling **`copilotkit-foundry-hitl`** skill
   (`.agents/skills/copilotkit-foundry-hitl/`): `references/{architecture,patterns-7,
   troubleshooting,hosted-deploy}.md` and `workflows/*.md`. Load it before any change
@@ -51,9 +53,9 @@ Resolve this skill's base directory, then run its bundled scaffolder:
 bash <skill-dir>/scripts/new-app.sh <app-name> [target-dir]  # lowercase-hyphen
 ```
 
-Extracts the bundled canonical template into `<target-dir>/<app-name>/` and rewrites the
-agent-name tokens (`AGENT_NAME`, `<CopilotKit agent>`, route, hosted yaml) so they
-stay consistent.
+Extracts the bundled Cookiecutter template and runs `uvx cookiecutter` to instantiate
+it into `<target-dir>/<app-name>/`, rewriting the agent-name tokens (`AGENT_NAME`,
+`<CopilotKit agent>`, route, hosted yaml, `deploy/`) so they stay consistent.
 
 ## 2. Customize to the user's prompt — extension points
 
@@ -90,7 +92,8 @@ make e2e        # real Chromium UI: read, approve, reject, and follow-up after a
 ```
 
 All three must be green. Then `make local` (dev loop) and, in a Foundry-enabled tenant,
-`make up` (azd → hosted agent) followed by a **live browser E2E** — the real DoD.
+`make up` (azd → hosted agent) + `make up-app` (azd → the bridge + frontend Container
+Apps, wired keyless to that agent) followed by a **live browser E2E** — the real DoD.
 
 ## Hand off
 

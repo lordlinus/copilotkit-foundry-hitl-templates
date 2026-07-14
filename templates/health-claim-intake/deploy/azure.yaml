@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+#
+# Deploys the LIGHT AG-UI bridge + Next.js frontend as two Container Apps that
+# talk keyless to an ALREADY-DEPLOYED Foundry hosted agent (see ../hosted/ and
+# `make up`). This does NOT deploy the agent — deploy the agent first.
+#
+# Run from this directory: `azd up` (== `make deploy-app`). Auth: the bridge's
+# managed identity is granted the "Foundry Agent Consumer" role (least-privilege
+# role for interacting with agent endpoints, see
+# https://learn.microsoft.com/azure/foundry/agents/concepts/hosted-agent-permissions)
+# on the Foundry account by infra/main.bicep — no keys anywhere.
+#
+# `project: .` (not `../backend` or `../frontend`) because azd >=1.27 rejects any
+# service path that traverses outside the project directory; the Docker build
+# `context` is set to `..` instead so each image can still be built from the
+# template root (the frontend/backend Dockerfiles COPY relative to that root).
+requiredVersions:
+    extensions:
+        azure.ai.agents: '>=0.1.0-preview'
+name: health-claim-intake-app
+services:
+    bridge:
+        project: .
+        host: containerapp
+        language: python
+        docker:
+            remoteBuild: true
+            path: backend/Dockerfile
+            context: ..
+    frontend:
+        project: .
+        host: containerapp
+        language: ts
+        docker:
+            remoteBuild: true
+            path: frontend/Dockerfile
+            context: ..
+
+hooks:
+    postprovision:
+        shell: sh
+        run: |
+            echo ""
+            echo "=================================================================="
+            echo "Bridge + frontend deployed."
+            echo "  Frontend URL : https://${SERVICE_FRONTEND_FQDN}"
+            echo "  Bridge URL   : https://${SERVICE_BRIDGE_FQDN} (internal-only ingress)"
+            echo ""
+            echo "Open the frontend URL and confirm: a read query answers, and a"
+            echo "consequential action PAUSES for approval (the same HITL contract"
+            echo "verified locally by 'make smoke'/'make e2e') before declaring this done."
+            echo "=================================================================="

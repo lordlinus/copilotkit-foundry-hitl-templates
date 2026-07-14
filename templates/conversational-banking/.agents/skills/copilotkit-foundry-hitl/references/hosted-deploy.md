@@ -59,12 +59,39 @@ same HITL contract you verified locally with `make smoke`.
 ## Connecting a frontend to the hosted agent (the light bridge)
 
 In production the chat UI does NOT run the agent — it talks to the deployed Foundry
-hosted agent through the **light bridge** (`backend/bridge_app.py`, the
-`backend/Dockerfile` default). Deploy the bridge as a Container App and point the
-CopilotKit runtime's `AG_UI_BACKEND_URL` at it; set `FOUNDRY_PROJECT_ENDPOINT` +
-`HOSTED_AGENT_NAME` (the deployed agent) on the bridge so `HostedProxyAgent` can reach
-it keyless. Run a single replica (per-thread conversation/session cache is
-in-memory) or externalise the cache. The CopilotKit `route.ts` bridge is unchanged.
+hosted agent through the **light bridge** (`backend/bridge_app.py`). Deploy the
+bridge + the Next.js frontend as **two Container Apps** with the bundled `deploy/`
+azd project (Bicep, not hand-run `az containerapp` commands):
+
+```bash
+cd deploy
+azd env new <env-name>-app            # a separate azd env from hosted/'s
+azd env set AZURE_LOCATION <region>
+azd env set FOUNDRY_ACCOUNT_RESOURCE_ID <the Foundry account resource ID>
+azd env set FOUNDRY_PROJECT_ENDPOINT <the project endpoint from `make up`>
+azd env set HOSTED_AGENT_NAME <the deployed agent name — same as hosted/agent.yaml `name:`>
+make up-app       # == azd up : provisions ACR + Container Apps env + both apps
+```
+
+What `make up-app` provisions (`deploy/infra/`):
+- **bridge** Container App — `backend/Dockerfile`, **internal-only ingress** (never
+  exposed to the internet), a user-assigned managed identity granted the
+  **`Foundry Agent Consumer`** role (role ID `eed3b665-ab3a-47b6-8f48-c9382fb1dad6`
+  — the least-privilege role for *interacting* with agent endpoints; NOT the
+  "Azure AI User"/"Cognitive Services OpenAI User" roles, which are for direct
+  model inference and won't authorize hosted-agent calls) on the Foundry account.
+  `FOUNDRY_PROJECT_ENDPOINT` + `HOSTED_AGENT_NAME` + `AZURE_CLIENT_ID` (the
+  identity) are injected as env vars — matching `backend/.env.example`'s "drive a
+  DEPLOYED hosted agent" contract, keyless.
+- **frontend** Container App — `frontend/Dockerfile`, externally exposed, with
+  `AG_UI_BACKEND_URL` set to the bridge's *internal* FQDN (reachable only inside
+  the same Container Apps environment — the browser never talks to the bridge
+  directly, only to the frontend, matching `frontend/.env.example`).
+
+Run a single replica of the bridge (already pinned in the Bicep: `minReplicas:
+maxReplicas: 1`) — its per-thread conversation/session cache is in-memory; scaling
+it out or to zero would split or drop that state.
 
 For the local dev loop, `make local` runs the SAME agent locally via
 `azd ai agent run` and points the bridge (`bridge_app:app`) at it — no mock.
+

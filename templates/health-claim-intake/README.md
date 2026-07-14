@@ -33,6 +33,10 @@ make local                                 # backend :8080 + frontend :3000
 
 # Deploy the hosted Foundry agent (needs az login to the Foundry tenant):
 make up
+
+# Deploy the bridge + frontend as two Container Apps, wired keyless to the
+# agent `make up` just deployed (needs `make up` first):
+make up-app
 ```
 
 Open http://localhost:3000 and try: *"list the documents"* →
@@ -50,6 +54,7 @@ Open http://localhost:3000 and try: *"list the documents"* →
 | `frontend/app/api/copilotkit/[[...slug]]/route.ts` | The CopilotKit bridge (multi-route, v2 runtime). **Don't edit.** |
 | `frontend/components/Chat.tsx` | CopilotKit v2 cards: `useHumanInTheLoop` (HITL) + `useRenderTool`. **Edit render cards.** |
 | `hosted/` | `azd` → Foundry hosted agent (Responses). `build_hosted_agent()`. |
+| `deploy/` | `azd` → the bridge + frontend as two Container Apps (`make up-app`), wired keyless to the deployed hosted agent. |
 | `scripts/verify.sh`, `scripts/smoke.py` | The proof: structural + end-to-end vs the real local agent. |
 
 ## Scripts (make targets)
@@ -62,6 +67,7 @@ Open http://localhost:3000 and try: *"list the documents"* →
 | `make smoke` | end-to-end HITL test against the REAL agent (`azd ai agent run`) |
 | `make e2e` | real-browser HITL journey against the REAL agent |
 | `make up` / `make deploy` | `azd up` / `azd deploy` the hosted agent |
+| `make up-app` / `make deploy-app` | `azd up` / `azd deploy` the bridge + frontend Container Apps (`deploy/`) |
 | `make clean` | remove venv / node_modules / .next |
 
 ## Definition of Done
