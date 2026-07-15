@@ -3,19 +3,27 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Static gallery + AG-UI chat client for the showcase. Talks directly to the always-on gateway over AG-UI SSE — no CopilotKit runtime, deployable to GitHub Pages.",
+  "description": "Static gallery for the showcase, built on CopilotKit v2 React (CopilotChat + useHumanInTheLoop). AG-UI agents run client-side (HttpAgent straight to the always-on gateway over SSE), so the site stays static and deploys to GitHub Pages — no runtime server.",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "mock:gateway": "node test/mock-gateway.mjs",
     "test:dom": "node --test test/dom.test.mjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@ag-ui/client": "0.0.57"
+    "@ag-ui/client": "0.0.57",
+    "@copilotkit/react-core": "^1.62.3",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@playwright/test": "1.61.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
     "esbuild": "0.28.1",
     "jsdom": "29.1.1",
     "typescript": "6.0.3",

@@ -3,6 +3,8 @@ import { mkdirSync } from "node:fs";
 
 // End-to-end in a real browser against the built UI + real Foundry-backed gateway.
 // Proves the user-visible HITL flow for each agent and screenshots it.
+// (For gateway-free local runs, `node test/mock-gateway.mjs` serves the same
+// protocol on :8080 with scripted scenarios.)
 
 const SHOT_DIR = "screenshots";
 mkdirSync(SHOT_DIR, { recursive: true });
@@ -13,13 +15,14 @@ async function openAgent(page: Page, cardTitle: string) {
   const item = page.locator(".agent-item", { hasText: cardTitle });
   await expect(item).toBeVisible();
   await item.click();
-  await expect(page.locator(".chat-panel .transcript")).toBeVisible();
+  await expect(page.locator(".chat-panel .chat")).toBeVisible();
 }
 
 async function send(page: Page, text: string) {
-  const input = page.locator(".composer-input");
+  // CopilotChat composer (CopilotKit v2).
+  const input = page.locator(".chat-panel textarea").first();
   await input.fill(text);
-  await page.locator(".composer button[type=submit]").click();
+  await input.press("Enter");
 }
 
 test("console renders the agent picker with all agents", async ({ page }) => {
@@ -45,9 +48,10 @@ test("banking: consequential action shows a VISIBLE approval card with Approve/R
   await expect(approval).not.toHaveText(/\{\s*\}/);
   await page.screenshot({ path: `${SHOT_DIR}/banking-approval.png`, fullPage: true });
 
-  // Approving resolves the gate.
+  // Approving resolves the gate to the stamped checkpoint.
   await approveBtn.click();
   await expect(page.locator(".approval.approved")).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator(".stamp.stamp-approved")).toBeVisible();
 });
 
 test("claim: form loads on demand and submit approval shows the record (not {})", async ({ page }) => {

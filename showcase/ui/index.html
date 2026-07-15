@@ -1,5 +1,6 @@
 <!doctype html>
-<html lang="en">
+<!-- class="dark": CopilotKit v2 gates its dark-mode styles on a .dark ancestor -->
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,12 +9,28 @@
       name="description"
       content="A live gallery of agentic apps built on AG-UI + Microsoft Agent Framework + Azure AI Foundry, with human-in-the-loop approval. Try each agent in your browser."
     />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
     <!-- Runtime config (gateway URL), stamped by the Pages workflow. Must load
          before the module so window.SHOWCASE_API_BASE is set. -->
     <script src="./config.js"></script>
+    <!-- CopilotKit v2 / @ag-ui/client capture the global `fetch` as a bare
+         reference and later call it with the wrong `this`, throwing "Illegal
+         invocation". Bind it to window BEFORE any module loads. -->
+    <script>
+      if (typeof window !== "undefined" && typeof window.fetch === "function" && !window.fetch.__bound) {
+        var __f = window.fetch.bind(window);
+        __f.__bound = true;
+        window.fetch = __f;
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
