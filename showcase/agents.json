@@ -1,5 +1,5 @@
 {
-  "$comment": "Registry of agents featured in the showcase gallery. The gateway serves this (minus internal `port`/`backendDir`) at GET /agents; the static UI renders one card per entry and opens a chat against /agents/<id>/. `sourcePath` links back to the template that powers each agent. Keep `agentName` in sync with AGENT_NAME in templates/<id>/src/agent.py.",
+  "$comment": "Registry of agents featured in the showcase gallery. The gateway serves this (minus internal `port`/`backendDir`) at GET /agents; the static UI renders one card per entry and opens a chat against /agents/<id>/. `sourcePath` links back to the template that powers each agent. `agentName` mirrors AGENT_NAME in templates/<id>/src/agent.py (informational). `backendDir` must contain bridge_app.py/hosted_client.py/hosted_proxy.py ONLY -- the gateway runs no template runtime, it forwards every turn to the REAL Foundry hosted agent deployed via templates/<id>/hosted/ (or showcase/agents/<id>/). `hostedAgentName` is the deployed Foundry agent's id (HOSTED_AGENT_NAME); defaults to `id` when omitted.",
   "agents": [
     {
       "id": "agentic-copilot-foundry",
@@ -57,19 +57,19 @@
       "id": "copilot-pr-assistant",
       "title": "Copilot PR Assistant (HITL)",
       "agentName": "copilot_pr_assistant",
+      "hostedAgentName": "copilot-pr-assistant-hosted",
       "tagline": "GitHub Copilot drafts a pull request — opening it pauses for your approval.",
-      "description": "Powered by the GitHub Copilot SDK (not Microsoft Agent Framework): Copilot reviews the changed files, drafts a PR title and body, and the open_pull_request action pauses on a human-in-the-loop approval card before it executes. Same AG-UI architecture, different engine.",
-      "stack": ["AG-UI", "GitHub Copilot SDK", "Azure (APIM) gpt-5"],
-      "sourcePath": "showcase/agents/copilot-pr-assistant",
+      "description": "Powered by the GitHub Copilot SDK (not Microsoft Agent Framework): Copilot reviews the changed files, drafts a PR title and body, and the open_pull_request action pauses on a human-in-the-loop approval card before it executes. Same AG-UI architecture, different engine — deployed the same way, as a real Foundry hosted agent behind the same thin bridge.",
+      "stack": ["AG-UI", "GitHub Copilot SDK", "Azure AI Foundry"],
+      "sourcePath": "showcase/agents/copilot-pr-assistant-hosted",
       "tryPrompts": ["List the changed files", "Review the changes and open a pull request"],
       "tools": [
         { "name": "list_changed_files", "description": "List files changed on the branch" },
         { "name": "get_file_diff", "description": "Show the diff for a file" },
         { "name": "propose_pull_request", "description": "Draft + open the PR", "consequential": true }
       ],
-      "runtime": "node",
       "port": 8104,
-      "backendDir": "showcase/agents/copilot-pr-assistant"
+      "backendDir": "showcase/agents/copilot-pr-assistant-hosted/bridge"
     }
   ]
 }

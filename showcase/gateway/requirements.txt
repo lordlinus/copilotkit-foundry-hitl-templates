@@ -1,17 +1,13 @@
-# Showcase gateway dependencies. The container runs, per MAF agent, BOTH the
-# Foundry hosted-agent runtime (ResponsesHostServer) AND the thin AG-UI bridge —
-# the same two-process stack the templates use locally (`make local`) and deploy.
-# So this is the UNION of the templates' root requirements.txt (hosted runtime)
-# and backend/requirements.txt (bridge), pinned to the templates' verified stack.
+# Showcase gateway dependencies. The container runs, per agent, ONLY the thin
+# AG-UI<->Responses bridge (bridge_app:app) — it forwards each turn to the
+# REAL Foundry hosted agent deployed via each template's `hosted/` azd project
+# (see templates/<id>/hosted/, showcase/agents/copilot-pr-assistant-hosted/).
+# All tools + HITL + history + tracing run server-side in the deployed hosted
+# agent; the gateway never runs a template's own runtime (app.py/src/) locally.
 # Re-run `make smoke` after any bump.
 
-# ── Hosted-agent runtime (ResponsesHostServer = <template>/app.py) ────────────
+# ── AG-UI bridge (bridge_app:app, PLATFORM/HOSTED mode -> the deployed agent) ─
 agent-framework-core==1.11.0
-agent-framework-foundry==1.10.1
-agent-framework-foundry-hosting==1.0.0a260709
-mcp>=1.24.0,<2
-
-# ── AG-UI bridge (bridge_app:app, DIRECT mode -> the runtime) ─────────────────
 agent-framework-ag-ui==1.0.0rc8
 httpx==0.28.1
 aiohttp>=3.10.0

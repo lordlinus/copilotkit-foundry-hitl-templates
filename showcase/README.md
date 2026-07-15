@@ -8,20 +8,29 @@
 
 This is a **self-contained demo** that sits alongside the
 [copilotkit-foundry-hitl-templates](../README.md) gallery without touching it. The agents it
-serves **are** the templates in [`../templates`](../templates) — run as-is, never
-forked — so the showcase always reflects the real, shippable code. One extra
-agent, the [Copilot PR Assistant](agents/copilot-pr-assistant), is built on the
-**GitHub Copilot SDK** instead of Microsoft Agent Framework — same AG-UI + HITL
-architecture, different engine. (The gateway launcher skips any registry agent
-whose runtime isn't baked into the image and doesn't advertise it at `/agents`,
-so the gallery degrades gracefully instead of going down.)
+serves **are** the templates in [`../templates`](../templates) — deployed as-is,
+never forked, as REAL Foundry **hosted agents** — so the showcase always
+reflects the real, shippable code and gets the real governance (tracing,
+evaluations, Optimize) that come with the hosted-agent architecture. One extra
+agent, the [Copilot PR Assistant](agents/copilot-pr-assistant-hosted), is built on
+the **GitHub Copilot SDK** instead of Microsoft Agent Framework — same AG-UI +
+HITL architecture, different engine, deployed the same way. (The gateway
+launcher skips any registry agent whose bridge isn't baked into the image and
+doesn't advertise it at `/agents`, so the gallery degrades gracefully instead of
+going down.)
 
 ---
 
 ## What it demonstrates
 
-- **One gateway, many agents.** A single container hosts every template agent and
-  proxies the open AG-UI (SSE) protocol per agent at `/agents/<id>/`.
+- **One gateway, many agents.** A single container hosts every agent's thin
+  AG-UI<->Responses bridge and proxies the open AG-UI (SSE) protocol per agent
+  at `/agents/<id>/`.
+- **Real Foundry hosted agents, not a local runtime.** Every tool call, HITL
+  pause/approve, conversation history, and trace lives in a REAL Foundry hosted
+  agent (`Build → Agents`, `type: hosted`) — the same thing `azd up` deploys for
+  any of these templates. The gateway forwards each turn to it; it runs no
+  agent logic itself.
 - **A featherweight client.** The browser uses
   [`@ag-ui/client`](https://www.npmjs.com/package/@ag-ui/client) directly — no
   CopilotKit runtime, no Node server — so the whole UI is static and fits on
@@ -38,11 +47,12 @@ so the gallery degrades gracefully instead of going down.)
  │  Static gallery (Pages)  │ ───────────────────────▶│  Gateway (Azure Container App)│
  │  @ag-ui/client + cards   │   /agents/<id>/  POST   │  CORS · /agents · reverse-proxy│
  └─────────────────────────┘                          └──────────────┬───────────────┘
-                                                                      │ one uvicorn per template
+                                                                      │ one bridge per agent (PLATFORM mode)
                                               ┌───────────────────────┼───────────────────────┐
                                               ▼                       ▼                       ▼
-                                     agentic-copilot-foundry   conversational-banking   health-claim-intake
-                                       (Microsoft Agent Framework agent, keyless → Azure AI Foundry)
+                                   Foundry hosted agent        Foundry hosted agent      Foundry hosted agent
+                                  agentic-copilot-foundry     conversational-banking     health-claim-intake
+                                 (tools + HITL + history + tracing all live here, keyless via managed identity)
 ```
 
 ---
@@ -54,13 +64,14 @@ showcase/
   agents.json              registry served at GET /agents (id, title, source link, …)
   gateway/                 the always-on container
     app.py                 FastAPI: CORS allow-list + /agents + SSE reverse-proxy
-    launcher.py            per agent: the Foundry hosted-agent runtime
-                           (ResponsesHostServer) + the AG-UI bridge, then the gateway
-    Dockerfile             MCR base; build context = repo root (copies templates/<id>)
+    launcher.py            per agent: ONLY the AG-UI bridge (PLATFORM/HOSTED mode),
+                           forwarding every turn to the REAL deployed Foundry
+                           hosted agent, then the gateway
+    Dockerfile             MCR base; build context = repo root (copies templates/<id>/backend)
     azure.yaml + infra/    azd: one Container App (scale-to-zero), ACR, managed identity, roles
   agents/                  gallery agents that are NOT templates
-    copilot-pr-assistant/  GitHub Copilot SDK agent (Node runtime; AG-UI + HITL)
-    copilot-pr-assistant-hosted/  its Foundry hosted-agent variant
+    copilot-pr-assistant/  GitHub Copilot SDK agent, Node runtime (standalone reference; not deployed by the gateway)
+    copilot-pr-assistant-hosted/  its Foundry hosted-agent variant + bridge/ (what the gateway actually uses)
   docs/                    deep dives (ag-ui-architecture.md: who provides AG-UI per agent)
   examples/                side demos (state-isolation: one agent, many isolated sessions)
   ui/                      static gallery + AG-UI chat (Vite + TypeScript)

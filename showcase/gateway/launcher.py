@@ -1,24 +1,25 @@
 """Supervisor for the showcase container.
 
-For each agent in ``agents.json`` it starts the SAME two-process stack the
-templates use locally (`make local`) and in production:
+For each agent in ``agents.json`` this starts ONLY the thin AG-UI<->Responses
+bridge (``bridge_app:app``) on the agent's public port, in **PLATFORM/HOSTED**
+mode — pointed at the REAL Foundry hosted agent deployed via each template's
+``hosted/`` azd project (or ``showcase/agents/<id>/`` for non-template agents).
+All tools + HITL + history run server-side in that deployed hosted agent, where
+governance/tracing/evaluations/Optimize apply; the bridge only translates
+AG-UI <-> Responses and forwards ``mcp_approval_response`` on approve. The
+gateway container never runs a template's own runtime (``app.py``/``src/``)
+locally — that pattern (DIRECT mode) is for `make local`/`make smoke` dev loops
+only, not this deployment.
 
-  * **MAF agents** (the default): the Foundry hosted-agent runtime
-    (``ResponsesHostServer`` = ``<template>/app.py``, the same thing ``azd ai agent
-    run`` runs) on an internal host port, plus the thin AG-UI<->Responses **bridge**
-    (``bridge_app:app``) on the agent's public port, pointed at that runtime in
-    DIRECT mode. All tools + HITL + history run server-side in the runtime; the
-    bridge only translates protocols and forwards ``mcp_approval_response``.
-  * **Node agents** (``runtime: node``): a self-contained AG-UI backend
-    (``node dist/index.js``) -- left unchanged.
+Node agents (``runtime: node``) remain a self-contained AG-UI backend, unchanged.
 
 The gateway (``app.py``) then reverse-proxies ``/agents/<id>/*`` to each bridge.
 On SIGTERM/SIGINT every child is torn down.
 
-Environment passed through to each backend:
-  FOUNDRY_PROJECT_ENDPOINT       the Foundry project (keyless; model for the runtime)
-  AZURE_AI_MODEL_DEPLOYMENT_NAME the model deployment the hosted agent runs on
-  AZURE_*                        DefaultAzureCredential inputs (managed identity in ACA)
+Environment passed through to each bridge:
+  FOUNDRY_PROJECT_ENDPOINT  the Foundry project hosting the deployed agents (keyless)
+  AZURE_*                   DefaultAzureCredential inputs (managed identity in ACA)
+  HOSTED_AGENT_NAME         set per-agent from `hostedAgentName` (or `id`) below
 """
 from __future__ import annotations
 
@@ -36,18 +37,12 @@ REPO_ROOT = Path(os.environ.get("REPO_ROOT", str(GATEWAY_DIR.parents[1])))
 REGISTRY_PATH = Path(os.environ.get("SHOWCASE_REGISTRY", str(GATEWAY_DIR.parent / "agents.json")))
 GATEWAY_PORT = os.environ.get("PORT", "8080")
 READY_TIMEOUT = float(os.environ.get("BACKEND_READY_TIMEOUT", "120"))
-# Internal Foundry hosted-agent runtime port = public bridge port + this offset.
-HOST_PORT_OFFSET = int(os.environ.get("HOST_PORT_OFFSET", "1000"))
 
 _children: list[subprocess.Popen] = []
 
 
 def _log(msg: str) -> None:
     print(f"[launcher] {msg}", flush=True)
-
-
-def _host_port(agent: dict) -> int:
-    return int(agent["port"]) + HOST_PORT_OFFSET
 
 
 def _spawn_node_backend(agent: dict) -> list[subprocess.Popen]:
@@ -63,51 +58,38 @@ def _spawn_node_backend(agent: dict) -> list[subprocess.Popen]:
     return [subprocess.Popen(["node", "dist/index.js"], cwd=str(backend_dir), env=env)]
 
 
-def _spawn_maf_backend(agent: dict) -> list[subprocess.Popen]:
-    """Start the hosted-agent runtime (ResponsesHostServer) + the bridge (DIRECT)."""
-    # backendDir is templates/<id>/backend; the runtime entrypoint app.py + src/ are
-    # one level up at the template root.
+def _spawn_bridge_backend(agent: dict) -> list[subprocess.Popen]:
+    """Start ONLY the AG-UI bridge (PLATFORM/HOSTED mode) against the deployed
+    Foundry hosted agent. `backendDir` must contain bridge_app.py + hosted_client.py
+    + hosted_proxy.py -- no template runtime is started here."""
     backend_dir = (REPO_ROOT / agent["backendDir"]).resolve()
-    template_dir = backend_dir.parent
-    app_py = template_dir / "app.py"
     bridge = backend_dir / "bridge_app.py"
-    if not app_py.exists():
-        raise FileNotFoundError(f"app.py (hosted-agent runtime) not found at {app_py}")
     if not bridge.exists():
         raise FileNotFoundError(f"bridge_app.py not found at {bridge}")
 
     public_port = str(agent["port"])
-    host_port = str(_host_port(agent))
+    hosted_agent_name = agent.get("hostedAgentName", agent["id"])
     agent_name = agent.get("agentName", agent["id"])
 
-    # 1) Foundry hosted-agent runtime (Responses) on the internal host port.
-    _log(f"starting '{agent['id']}' hosted-agent runtime (ResponsesHostServer) on :{host_port}")
-    runtime = subprocess.Popen(
-        [sys.executable, "app.py"],
-        cwd=str(template_dir),
-        env={**os.environ, "PORT": host_port},
-    )
-
-    # 2) The AG-UI bridge (DIRECT mode) on the public port the gateway proxies to.
-    _log(f"starting '{agent['id']}' AG-UI bridge on :{public_port} -> runtime :{host_port}")
+    _log(f"starting '{agent['id']}' AG-UI bridge on :{public_port} -> "
+         f"hosted agent '{hosted_agent_name}' (PLATFORM mode)")
     bridge_proc = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "bridge_app:app", "--host", "127.0.0.1", "--port", public_port],
         cwd=str(backend_dir),
         env={
             **os.environ,
             "PORT": public_port,
-            "HOSTED_AGENT_DIRECT_URL": f"http://127.0.0.1:{host_port}",
-            "HOSTED_AUTH": "none",
+            "HOSTED_AGENT_NAME": hosted_agent_name,
             "AGENT_NAME": agent_name,
         },
     )
-    return [runtime, bridge_proc]
+    return [bridge_proc]
 
 
 def _spawn_backend(agent: dict) -> list[subprocess.Popen]:
     if agent.get("runtime", "python") == "node":
         return _spawn_node_backend(agent)
-    return _spawn_maf_backend(agent)
+    return _spawn_bridge_backend(agent)
 
 
 def _wait_url(url: str, label: str) -> bool:

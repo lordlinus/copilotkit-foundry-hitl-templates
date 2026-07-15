@@ -16,5 +16,7 @@ services:
         config:
             container:
                 resources:
-                    cpu: "0.5"
-                    memory: 1Gi
+                    cpu: "1"
+                    memory: 2Gi
+infra:
+    provider: microsoft.foundry

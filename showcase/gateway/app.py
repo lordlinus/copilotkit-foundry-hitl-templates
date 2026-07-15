@@ -1,13 +1,14 @@
 """Multi-agent showcase gateway.
 
 One always-on container fronts every agent in the gallery. Each agent runs as its
-OWN backend on an internal port (started by ``launcher.py``): MAF agents run the
-Foundry hosted-agent runtime (``ResponsesHostServer``) plus the thin AG-UI bridge
-(``bridge_app:app``); Node agents run a self-contained AG-UI backend. This FastAPI
-app reverse-proxies ``/agents/<id>/*`` to ``127.0.0.1:<port>/*`` and streams the
-AG-UI SSE response straight back to the browser.
+OWN AG-UI<->Responses bridge on an internal port (started by ``launcher.py``),
+forwarding every turn to the REAL Foundry hosted agent deployed via
+``templates/<id>/hosted/`` (or ``showcase/agents/<id>/``); Node agents run a
+self-contained AG-UI backend instead. This FastAPI app reverse-proxies
+``/agents/<id>/*`` to ``127.0.0.1:<port>/*`` and streams the AG-UI SSE response
+straight back to the browser.
 
-Running each backend in its own process isolates the per-template AG-UI
+Running each bridge in its own process isolates the per-template AG-UI
 monkeypatches from the others, so the gallery hosts all of them without conflict
 and **without modifying any template code**.
 

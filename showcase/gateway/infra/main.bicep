@@ -11,7 +11,7 @@ param location string
 @description('Resource group name.')
 param resourceGroupName string = 'rg-copilotkit-foundry-showcase'
 
-@description('Existing Foundry / Azure AI Services account resource ID (parent of the project endpoint). The gateway managed identity is granted model-inference roles on it.')
+@description('Existing Foundry / Azure AI Services account resource ID (the project the deployed hosted agents live in). The gateway managed identity is granted the Foundry Agent Consumer role on it to call those agents.')
 param foundryAccountResourceId string
 
 @description('Foundry project endpoint, e.g. https://<account>.services.ai.azure.com/api/projects/<project>')
@@ -50,30 +50,21 @@ module workload 'workload.bicep' = {
   }
 }
 
-// Grant the Container App's managed identity model-inference access on the
-// Foundry account so the agents can call Chat Completions keyless.
-// "Cognitive Services OpenAI User" — data-plane access to OpenAI deployments.
-var cogSvcOpenAiUserRoleId = '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
-// "Azure AI User" — runtime access to AI projects (belt-and-braces).
-var azureAiUserRoleId = '53ca6127-db72-4b80-b1b0-d745d6d5456d'
+// Grant the Container App's managed identity access to call the deployed
+// Foundry HOSTED agents' Responses endpoints (the gateway forwards every turn
+// to them; it makes no direct model-inference calls). "Foundry Agent Consumer"
+// is the least-privilege role for this — the same role each template's own
+// `deploy/` bicep grants its bridge identity (see
+// templates/agentic-copilot-foundry/deploy/infra/main.bicep).
+var foundryAgentConsumerRoleId = 'eed3b665-ab3a-47b6-8f48-c9382fb1dad6'
 
-module roleOpenAi 'role-assignment.bicep' = {
+module roleAgentConsumer 'role-assignment.bicep' = {
   scope: resourceGroup(foundryRgName)
-  name: 'role-foundry-openai-user'
+  name: 'role-foundry-agent-consumer'
   params: {
     foundryAccountName: foundryAccountName
     principalId: workload.outputs.identityPrincipalId
-    roleDefinitionId: cogSvcOpenAiUserRoleId
-  }
-}
-
-module roleAiUser 'role-assignment.bicep' = {
-  scope: resourceGroup(foundryRgName)
-  name: 'role-foundry-ai-user'
-  params: {
-    foundryAccountName: foundryAccountName
-    principalId: workload.outputs.identityPrincipalId
-    roleDefinitionId: azureAiUserRoleId
+    roleDefinitionId: foundryAgentConsumerRoleId
   }
 }
 

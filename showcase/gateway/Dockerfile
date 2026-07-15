@@ -19,23 +19,19 @@ WORKDIR /app
 COPY showcase/gateway/requirements.txt /tmp/gateway-requirements.txt
 RUN pip install --no-cache-dir --pre -r /tmp/gateway-requirements.txt
 
-# Each MAF agent runs <template>/app.py (the ResponsesHostServer runtime, which
-# imports ../src) + backend/bridge_app.py (the AG-UI bridge). Copy app.py, src/
-# and backend/ for every featured template.
-COPY templates/agentic-copilot-foundry/app.py    ./templates/agentic-copilot-foundry/app.py
-COPY templates/agentic-copilot-foundry/src/      ./templates/agentic-copilot-foundry/src/
+# Each agent's public surface is ONLY its AG-UI<->Responses bridge
+# (backend/bridge_app.py + hosted_client.py + hosted_proxy.py) — it forwards
+# every turn to the REAL Foundry hosted agent deployed via `templates/<id>/hosted/`
+# (or `showcase/agents/copilot-pr-assistant-hosted/`). The gateway image never
+# includes a template's own runtime (app.py/src/): no tools, no HITL, no model
+# calls happen in this container — that is the whole point of the hosted-agent
+# architecture (governance/tracing/Optimize live with the deployed agent).
 COPY templates/agentic-copilot-foundry/backend/  ./templates/agentic-copilot-foundry/backend/
-COPY templates/conversational-banking/app.py     ./templates/conversational-banking/app.py
-COPY templates/conversational-banking/src/       ./templates/conversational-banking/src/
 COPY templates/conversational-banking/backend/   ./templates/conversational-banking/backend/
-COPY templates/health-claim-intake/app.py        ./templates/health-claim-intake/app.py
-COPY templates/health-claim-intake/src/          ./templates/health-claim-intake/src/
 COPY templates/health-claim-intake/backend/      ./templates/health-claim-intake/backend/
+COPY showcase/agents/copilot-pr-assistant-hosted/bridge/ ./showcase/agents/copilot-pr-assistant-hosted/bridge/
 
-# Gateway + registry. Registry entries whose runtime is NOT in this image
-# (e.g. the Node-based copilot-pr-assistant under showcase/agents/) are skipped
-# by launcher.py at start and not advertised at /agents — to feature one, add
-# its runtime + built output here.
+# Gateway + registry.
 COPY showcase/agents.json   ./showcase/agents.json
 COPY showcase/gateway/      ./showcase/gateway/
 

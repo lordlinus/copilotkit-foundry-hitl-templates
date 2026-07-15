@@ -1,0 +1,20 @@
+# Keeps the docker build context small for both local `docker build` and azd's
+# remote-build path (hosted/azure.yaml, docker.context: ".."). Without this,
+# backend/.venv + frontend/node_modules + frontend/.next balloon the context to
+# ~3GB, which fails Foundry remote builds with "archive/tar: write too long".
+.git
+.azure
+hosted/.azure
+deploy/.azure
+**/__pycache__
+*.pyc
+.venv
+backend/.venv
+src/.venv
+node_modules
+frontend/node_modules
+frontend/.next
+.env
+.env.local
+backend/.env
+frontend/.env.local
