@@ -32,7 +32,10 @@ COPY templates/health-claim-intake/app.py        ./templates/health-claim-intake
 COPY templates/health-claim-intake/src/          ./templates/health-claim-intake/src/
 COPY templates/health-claim-intake/backend/      ./templates/health-claim-intake/backend/
 
-# Gateway + registry.
+# Gateway + registry. Registry entries whose runtime is NOT in this image
+# (e.g. the Node-based copilot-pr-assistant under showcase/agents/) are skipped
+# by launcher.py at start and not advertised at /agents — to feature one, add
+# its runtime + built output here.
 COPY showcase/agents.json   ./showcase/agents.json
 COPY showcase/gateway/      ./showcase/gateway/
 

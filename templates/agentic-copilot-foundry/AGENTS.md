@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This project was scaffolded from the **forgewright** template: a Next.js +
+This project was scaffolded from the **copilotkit-foundry-hitl-templates** gallery: a Next.js +
 CopilotKit chat UI over a FastAPI + AG-UI (SSE) backend hosting one Microsoft
 Agent Framework agent, connected keyless to Azure AI Foundry, with native
 human-in-the-loop approval.
@@ -9,7 +9,7 @@ human-in-the-loop approval.
 `.agents/skills/copilotkit-foundry-hitl/SKILL.md`** — the Day-2 dev skill lists the
 load-bearing rules, the known traps, the Definition of Done, and step-by-step
 workflows (add-tool, wire-hitl, debug-hitl, shared-state, upgrade-loop).
-`.agents/skills/forgewright/SKILL.md` is the quick app-specific guide.
+`.agents/skills/copilotkit-foundry-scaffold/SKILL.md` is the quick app-specific guide.
 
 ## Where to make changes
 

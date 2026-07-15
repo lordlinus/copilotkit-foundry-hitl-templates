@@ -2,14 +2,14 @@
 name: copilotkit-foundry-hitl
 description: "Use when DEVELOPING, extending, debugging, or upgrading an existing app on the CopilotKit + AG-UI + Azure AI Foundry hosted-agent stack — a Next.js/CopilotKit v2 UI over an AG-UI (SSE) bridge (HostedProxyAgent) that forwards each turn to a deployed/local Microsoft Agent Framework agent running in Foundry (FoundryChatClient, Responses), with human-in-the-loop approval forwarded via mcp_approval_response. This is the Day-2 skill: add/modify a tool, wire a new HITL approval, add shared/predictive state, debug why approve doesn't re-execute, and upgrade agent-framework while re-checking/removing bridge patches. Triggers: agent.py build_hosted_agent, FoundryChatClient, HostedProxyAgent, bridge_app, hosted_proxy, hosted_client, mcp_approval_response, confirm_changes, approval_mode always_require, useAgent/useFrontendTool/useRenderTool/useHumanInTheLoop, add a tool, add approval, shared state, predictive state, approve doesn't re-execute, upgrade agent-framework, protocol 2.0, azd ai agent run, make smoke, make verify. Also for traps — HITL approve-resume 400 'No tool output found', cards vanishing at RUN_FINISHED, [[...slug]] Threads 404/422, useSingleEndpoint, keyless Foundry 401 audience, Entra isolation 400, fetch Illegal invocation, Docker Hub ACR rate-limit."
 metadata:
-  author: forgewright
+  author: lordlinus
   version: "0.1.0"
 ---
 
 # copilotkit-foundry-hitl — developing on the hosted-agent + HITL bridge stack
 
 The **continual-development** skill for apps built on this stack. Scaffolding a new
-app is the `forgewright` skill's job; this skill is everything after: **evolve,
+app is the `copilotkit-foundry-scaffold` skill's job; this skill is everything after: **evolve,
 debug, and upgrade** an app whose intelligence lives in an **Azure AI Foundry HOSTED
 agent** (FoundryChatClient + tools + HITL + history, Responses protocol) reached
 through a **light AG-UI bridge** (`HostedProxyAgent`) from a **CopilotKit v2** UI.
@@ -32,7 +32,7 @@ one chat reply is **not** proof. Because all logic is server-side, a change is d
 only when `make verify` (structural) + `make smoke` (the bridge against the REAL
 agent run locally via `azd ai agent run`) pass, and — for the deployed path — a
 **live browser E2E** covers the patterns you touched (HITL approve **and** reject).
-Apps scaffolded by forgewright expose that gate as `make e2e`.
+Apps scaffolded from this gallery expose that gate as `make e2e`.
 
 ## Orient (read before changing anything)
 

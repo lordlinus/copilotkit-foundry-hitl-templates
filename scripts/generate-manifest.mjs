@@ -37,8 +37,8 @@ function rootManifest(templates) {
     .join("\n");
   return `apiVersion: v1
 metadata:
-  name: forgewright
-  displayName: forgewright Templates
+  name: copilotkit-foundry-hitl-templates
+  displayName: CopilotKit + Foundry HITL Templates
   description: One-prompt CopilotKit + AG-UI + Foundry hosted-agent apps with HITL
 entries:
 ${entries}
@@ -98,9 +98,9 @@ function writeOrCheck(path, content) {
 const templates = readTemplates();
 let ok = true;
 
-ok = writeOrCheck(join(ROOT, "forgewright-template.yml"), rootManifest(templates)) && ok;
+ok = writeOrCheck(join(ROOT, "template-manifest.yml"), rootManifest(templates)) && ok;
 for (const t of templates) {
-  ok = writeOrCheck(join(TEMPLATES_DIR, t.name, "forgewright-template.yml"), leafManifest(t)) && ok;
+  ok = writeOrCheck(join(TEMPLATES_DIR, t.name, "template-manifest.yml"), leafManifest(t)) && ok;
 }
 const readmePath = join(ROOT, "README.md");
 if (existsSync(readmePath)) {

@@ -1,6 +1,6 @@
 // Minimal AG-UI event emitter over SSE. AG-UI is just newline-delimited JSON
 // events on an SSE stream; these helpers write the exact event shapes the
-// @ag-ui/client (and the forgewright showcase UI) consume.
+// @ag-ui/client (and the showcase UI) consume.
 
 import type { ServerResponse } from "node:http";
 

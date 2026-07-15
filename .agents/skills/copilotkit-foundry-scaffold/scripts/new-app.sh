@@ -31,8 +31,8 @@ tmpl="$(mktemp -d)"
 trap 'rm -rf "$tmpl"' EXIT
 tar -xzf "$ARCHIVE" -C "$tmpl"
 
-# app-name validation, file rewriting (agentic-copilot-foundry/forgewright_app/
-# forgewright-app -> the new name), and the "next steps" message all live in
+# app-name validation, file rewriting (agentic-copilot-foundry/agentic_copilot_foundry/
+# agentic-copilot-foundry -> the new name), and the "next steps" message all live in
 # the template's cookiecutter.json + hooks/ — see
-# .agents/skills/forgewright/cookiecutter/ in the gallery repository.
+# .agents/skills/copilotkit-foundry-scaffold/cookiecutter/ in the gallery repository.
 uvx cookiecutter "$tmpl" --no-input "app_name=$NAME" --output-dir "$TARGET_DIR"

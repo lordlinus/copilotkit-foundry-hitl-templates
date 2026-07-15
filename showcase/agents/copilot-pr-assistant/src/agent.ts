@@ -4,7 +4,7 @@
 // `propose_pull_request`. That tool is NON-consequential here — it only records a
 // DRAFT and returns immediately. The AG-UI bridge (bridge.ts) turns that draft
 // into a human-in-the-loop `confirm_changes` gate; the PR is only actually opened
-// after the user approves. This mirrors the forgewright HITL contract, but the
+// after the user approves. This mirrors the gallery HITL contract, but the
 // engine is the GitHub Copilot SDK instead of Microsoft Agent Framework.
 //
 // mode:"empty" gives a bare runtime with ONLY our tools (no built-in file/shell

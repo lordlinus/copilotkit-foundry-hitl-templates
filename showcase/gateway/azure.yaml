@@ -4,9 +4,9 @@
 # `project: ../..` points the Docker build context at the repo ROOT so the
 # Dockerfile can COPY templates/<id>/{src,backend}. remoteBuild uses ACR Tasks
 # (MCR base image, so no Docker Hub rate-limit).
-name: forgewright-showcase-gateway
+name: copilotkit-foundry-showcase-gateway
 metadata:
-  template: forgewright-showcase-gateway@1.0.0
+  template: copilotkit-foundry-showcase-gateway@1.0.0
 
 services:
   gateway:

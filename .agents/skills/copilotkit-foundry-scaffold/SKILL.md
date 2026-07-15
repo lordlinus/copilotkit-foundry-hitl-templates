@@ -1,12 +1,12 @@
 ---
-name: forgewright
-description: "Use when SCAFFOLDING a NEW agentic web app on the CopilotKit + AG-UI + Azure AI Foundry hosted-agent stack — a Next.js/CopilotKit v2 chat UI over a FastAPI/AG-UI (SSE) bridge that forwards to ONE Microsoft Agent Framework agent hosted in Foundry, with native human-in-the-loop approval on consequential tools. This is the on-ramp: instantiate the canonical template and customize it to the user's prompt, then hand off to the copilotkit-foundry-hitl skill for ALL continued development (adding tools, wiring HITL, shared state, debugging, upgrades). Triggers: forgewright, build an agentic app, scaffold a CopilotKit app, new-app.sh, start a Foundry hosted-agent app, one prompt to an app, agentic-copilot-foundry template."
+name: copilotkit-foundry-scaffold
+description: "Use when SCAFFOLDING a NEW agentic web app on the CopilotKit + AG-UI + Azure AI Foundry hosted-agent stack — a Next.js/CopilotKit v2 chat UI over a FastAPI/AG-UI (SSE) bridge that forwards to ONE Microsoft Agent Framework agent hosted in Foundry, with native human-in-the-loop approval on consequential tools. This is the on-ramp: instantiate the canonical template and customize it to the user's prompt, then hand off to the copilotkit-foundry-hitl skill for ALL continued development (adding tools, wiring HITL, shared state, debugging, upgrades). Triggers: copilotkit-foundry-scaffold, build an agentic app, scaffold a CopilotKit app, new-app.sh, start a Foundry hosted-agent app, one prompt to an app, agentic-copilot-foundry template."
 metadata:
-  author: forgewright
+  author: lordlinus
   version: "0.4.0"
 ---
 
-# forgewright — one prompt → a new CopilotKit + AG-UI + Foundry HITL app
+# copilotkit-foundry-scaffold — one prompt → a new CopilotKit + AG-UI + Foundry HITL app
 
 The **scaffold on-ramp**. This skill instantiates a runnable app on the
 **hosted-agent-first** standard and customizes it to the user's prompt. It is
@@ -39,7 +39,7 @@ and `make e2e` (real Chromium) pass. Never declare success on an unverified buil
   **Cookiecutter** template (`cookiecutter.json` + hooks) instantiated by
   `scripts/new-app.sh` via `uvx cookiecutter` (requires `uv` —
   https://docs.astral.sh/uv/ — no persistent install). It does not depend on a
-  checkout of the forgewright gallery.
+  checkout of the copilotkit-foundry-hitl-templates gallery.
 - The deep stack knowledge lives in the sibling **`copilotkit-foundry-hitl`** skill
   (`.agents/skills/copilotkit-foundry-hitl/`): `references/{architecture,patterns-7,
   troubleshooting,hosted-deploy}.md` and `workflows/*.md`. Load it before any change

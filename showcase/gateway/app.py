@@ -71,13 +71,22 @@ def _load_registry() -> list[dict[str, Any]]:
 
 
 _AGENTS = _load_registry()
+
+# When started by launcher.py, only expose the agents whose backends actually
+# run in this container (a registry entry may need a runtime the image lacks).
+# Unset (standalone dev: `python app.py`) means no filtering.
+_STARTED = os.environ.get("SHOWCASE_STARTED_AGENTS")
+if _STARTED is not None:
+    _started_ids = {s for s in _STARTED.split(",") if s}
+    _AGENTS = [a for a in _AGENTS if a["id"] in _started_ids]
+
 _PORT_BY_ID = {a["id"]: int(a["port"]) for a in _AGENTS}
 
 # Public view of the registry — internal fields stripped.
 _PUBLIC_FIELDS = ("id", "title", "agentName", "tagline", "description", "stack", "sourcePath", "tryPrompts", "tools")
 _PUBLIC_AGENTS = [{k: a[k] for k in _PUBLIC_FIELDS if k in a} for a in _AGENTS]
 
-app = FastAPI(title="forgewright showcase gateway")
+app = FastAPI(title="showcase gateway")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,

@@ -4,7 +4,7 @@
     {
       "id": "agentic-copilot-foundry",
       "title": "Agentic Assistant (HITL)",
-      "agentName": "forgewright_app",
+      "agentName": "agentic_copilot_foundry",
       "tagline": "The canonical stack: read freely, but every consequential action pauses for your approval.",
       "description": "A minimal but complete CopilotKit + AG-UI + Foundry hosted-agent app. It can read a value and apply a delta — and any change pauses on a human-in-the-loop approval card before it executes.",
       "stack": ["Next.js", "AG-UI", "Microsoft Agent Framework", "Azure AI Foundry"],

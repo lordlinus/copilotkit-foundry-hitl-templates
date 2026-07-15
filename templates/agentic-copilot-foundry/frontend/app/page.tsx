@@ -7,7 +7,7 @@ export default function Page() {
   return (
     <CopilotKit
       runtimeUrl="/api/copilotkit"
-      agent="forgewright_app"
+      agent="agentic_copilot_foundry"
       showDevConsole={false}
       // The route uses the multi-route hono handler (createCopilotHonoHandler),
       // so info/threads/agent-run are dispatched by URL path + HTTP method.
@@ -19,7 +19,7 @@ export default function Page() {
       <main className="app">
         <header className="topbar">
           <span className="logo">⚒︎</span>
-          <span className="title">forgewright</span>
+          <span className="title">agentic-copilot-foundry</span>
           <span className="sub">CopilotKit · AG-UI · Foundry · Human-in-the-loop</span>
         </header>
         <Chat />

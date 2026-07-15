@@ -30,7 +30,7 @@ from __future__ import annotations
 import logging
 import os
 
-logger = logging.getLogger("forgewright.docintel")
+logger = logging.getLogger("app.docintel")
 
 _AUDIENCE = "https://cognitiveservices.azure.com/.default"
 

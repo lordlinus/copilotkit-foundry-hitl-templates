@@ -10,13 +10,13 @@ How a coding agent turns one sentence into a verified, running app.
 ## What the agent does (and you can do by hand)
 
 1. **Load the skill.** `AGENTS.md` points to
-   `.agents/skills/forgewright/SKILL.md` — the scaffold on-ramp. It hands off to the
+   `.agents/skills/copilotkit-foundry-scaffold/SKILL.md` — the scaffold on-ramp. It hands off to the
    `copilotkit-foundry-hitl` skill (the load-bearing rules, the known traps, the 7
    patterns, and the Day-2 workflows) for everything after the initial customization.
 
 2. **Scaffold.**
    ```bash
-   bash <forgewright-skill-dir>/scripts/new-app.sh product-orderer ~/projects
+   bash <scaffold-skill-dir>/scripts/new-app.sh product-orderer ~/projects
    ```
    This extracts the skill's bundled canonical template into
    `~/projects/product-orderer/` and rewrites the agent-name tokens. No gallery

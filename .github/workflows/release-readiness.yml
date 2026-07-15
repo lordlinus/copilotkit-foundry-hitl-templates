@@ -73,7 +73,7 @@ jobs:
       - name: Scaffold only from skill contents
         run: |
           tmp="$(mktemp -d)"
-          bash .agents/skills/forgewright/scripts/new-app.sh release-proof "$tmp"
+          bash .agents/skills/copilotkit-foundry-scaffold/scripts/new-app.sh release-proof "$tmp"
           make -C "$tmp/release-proof" verify
           cd "$tmp/release-proof/frontend"
           npm ci

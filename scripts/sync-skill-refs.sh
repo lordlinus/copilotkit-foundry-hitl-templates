@@ -6,7 +6,7 @@
 #
 # The repo ships TWO skills under .agents/skills/:
 #
-#   forgewright              — the scaffold on-ramp. Its SKILL.md is intentionally
+#   copilotkit-foundry-scaffold — the scaffold on-ramp. Its SKILL.md is intentionally
 #                              DIFFERENT per copy (root = "build a NEW app"; each
 #                              template = "customize/run/deploy THIS app"), so it is
 #                              hand-authored per copy and NOT synced by this script.
@@ -24,7 +24,7 @@
 #                              template's copy should ever change.
 #
 # So: EVERY file under .agents/skills/copilotkit-foundry-hitl/ (SKILL.md + references/*
-# + workflows/*) is synced; forgewright/SKILL.md is not.
+# + workflows/*) is synced; copilotkit-foundry-scaffold/SKILL.md is not.
 set -euo pipefail
 
 GALLERY_ROOT="$(cd "$(dirname "$0")/.." && pwd)"

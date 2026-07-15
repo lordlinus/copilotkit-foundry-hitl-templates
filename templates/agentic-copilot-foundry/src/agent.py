@@ -30,11 +30,11 @@ import os
 
 from agent_framework import tool
 
-logger = logging.getLogger("forgewright.agent")
+logger = logging.getLogger("app.agent")
 
 # MUST match <CopilotKit agent="..."> in the frontend and the hosted name. The
 # new-app.sh scaffolder rewrites this token when it instantiates the template.
-AGENT_NAME = "forgewright_app"
+AGENT_NAME = "agentic_copilot_foundry"
 
 
 # ── Demo state (replace with your domain) ─────────────────────────────────────

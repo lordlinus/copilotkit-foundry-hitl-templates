@@ -30,7 +30,7 @@ import os
 
 from agent_framework import tool
 
-logger = logging.getLogger("forgewright.agent")
+logger = logging.getLogger("app.agent")
 
 # MUST match <CopilotKit agent="..."> in the frontend and the hosted name.
 AGENT_NAME = "conversational_banking"

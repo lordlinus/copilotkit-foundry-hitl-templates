@@ -38,7 +38,7 @@ import agent_framework_ag_ui._agent_run as _agent_run
 from hosted_proxy import HostedProxyAgent
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("forgewright.bridge")
+logger = logging.getLogger("app.bridge")
 
 
 # ── HITL routing patches (apply once, before mounting the endpoint) ───────────
@@ -172,7 +172,7 @@ async def _verify_api_key(api_key: str | None = Security(_api_key_header)) -> No
 
 _dependencies = [Depends(_verify_api_key)] if _API_KEY else []
 
-app = FastAPI(title="forgewright AG-UI bridge")
+app = FastAPI(title="AG-UI bridge")
 app.add_middleware(SSEKeepAliveMiddleware, interval=float(os.getenv("SSE_KEEPALIVE_SECS", "10")))
 
 

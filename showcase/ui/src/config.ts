@@ -12,7 +12,7 @@ const fromEnv = (import.meta as any).env?.VITE_API_BASE as string | undefined;
 export const API_BASE = (window.SHOWCASE_API_BASE || fromEnv || "http://localhost:8080").replace(/\/+$/, "");
 
 // Public GitHub repo that hosts the templates (for "View source" links).
-export const REPO_URL = "https://github.com/lordlinus/forgewright";
+export const REPO_URL = "https://github.com/lordlinus/copilotkit-foundry-hitl-templates";
 export const REPO_BRANCH = "main";
 
 export interface AgentTool {

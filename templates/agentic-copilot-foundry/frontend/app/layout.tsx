@@ -3,7 +3,7 @@ import "@copilotkit/react-core/v2/styles.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "forgewright",
+  title: "Agentic Copilot",
   description: "CopilotKit + AG-UI + Foundry hosted agent with human-in-the-loop",
 };
 

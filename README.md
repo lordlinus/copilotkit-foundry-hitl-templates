@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚒︎ forgewright
+# CopilotKit + Foundry HITL Templates
 
 **Build a complete CopilotKit + AG-UI + Azure AI Foundry hosted-agent app — with human-in-the-loop approval that actually re-executes server-side.**
 
@@ -12,13 +12,13 @@ A template gallery for agentic apps on the **Microsoft Agent Framework + Copilot
 
 ## What is this?
 
-forgewright is a **template gallery + self-contained agent skills**. Point a coding agent
+**copilotkit-foundry-hitl-templates** is a **template gallery + self-contained agent skills**. Point a coding agent
 (GitHub Copilot CLI, Claude Code, …) at this repo and ask for an app:
 
 > *"Build me an assistant that can look up an order and issue a refund, but make
 > the refund require my approval first."*
 
-The agent reads `AGENTS.md` → loads `.agents/skills/forgewright/SKILL.md` →
+The agent reads `AGENTS.md` → loads `.agents/skills/copilotkit-foundry-scaffold/SKILL.md` →
 scaffolds the canonical template → customizes the agent's tools and the chat UI →
 proves it with `make verify` + `make smoke` + `make e2e` (protocol and real-browser
 checks against the REAL agent run locally via `azd ai agent run`) → and continues development via the
@@ -64,7 +64,9 @@ So we don't replace `agent-framework-ag-ui` — we **feed it** a tiny
 hosted agent over Responses and forwards `mcp_approval_response`, plus one patch
 that stops the adapter from resolving the approval locally (and a second,
 CopilotKit-v1-only, multi-tool snapshot split). `make smoke` proves both patches
-are load-bearing. See `references/architecture.md` for the full native-path matrix.
+are load-bearing. See
+[`.agents/skills/copilotkit-foundry-hitl/references/architecture.md`](.agents/skills/copilotkit-foundry-hitl/references/architecture.md)
+for the full native-path matrix.
 
 > **This is tracked upstream as [microsoft/agent-framework#6652](https://github.com/microsoft/agent-framework/issues/6652).**
 > When it lands, `agent-framework-ag-ui` + `FoundryAgent` become a complete native
@@ -72,29 +74,89 @@ are load-bearing. See `references/architecture.md` for the full native-path matr
 > and the `HostedProxyAgent` shim + the HITL-routing patch can be retired (you keep
 > using `agent-framework-ag-ui`, just without the custom shim).
 
-## Quick start
+## Getting started
+
+The path from zero to a running app: install the prerequisites, bootstrap a
+scaffold, install the Day-2 skill, then let GitHub Copilot build your
+application on top.
+
+### Prerequisites
+
+| Tool | Needed for | Install |
+| --- | --- | --- |
+| `git`, `make` | cloning the gallery and driving every workflow | system package manager |
+| [`uv`](https://docs.astral.sh/uv/) | the bundled Cookiecutter scaffolder (`uvx cookiecutter`) and the bridge's Python 3.12 venv — no separate Python install needed | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+| Node.js ≥ 22 + `npm` | the Next.js/CopilotKit frontend, Playwright E2E, and the Copilot CLI (which needs 22+) | [nodejs.org](https://nodejs.org) |
+| [GitHub CLI (`gh`)](https://cli.github.com) | installing the published Day-2 skill | `brew install gh` / package manager |
+| [GitHub Copilot CLI (`copilot`)](https://github.com/github/copilot-cli) | the coding agent that customizes the scaffold to your prompt — any Copilot plan (incl. Free) | `npm install -g @github/copilot` |
+| Azure CLI (`az`) + [Azure Developer CLI (`azd`)](https://aka.ms/azd) | running the REAL agent locally (`azd ai agent run`) and deploying — needed from `make smoke` onward, not for scaffolding | [learn.microsoft.com](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) |
+| An Azure subscription with **Azure AI Foundry** access | the hosted agent (a paid service) | [ai.azure.com](https://ai.azure.com) |
+
+### 1. Bootstrap the app
 
 ```bash
-# Scaffold from the gallery checkout (delegates to the same bundled skill asset
-# that is published with the forgewright scaffold skill):
-scripts/new-app.sh my-app ~/projects
-
+git clone https://github.com/lordlinus/copilotkit-foundry-hitl-templates
+cd copilotkit-foundry-hitl-templates
+scripts/new-app.sh my-app ~/projects   # uvx cookiecutter under the hood
 cd ~/projects/my-app
-make verify      # structural checks (no network)
+make verify                            # structural gate — green before you touch anything
+```
+
+The scaffold is a complete, runnable app: Next.js + CopilotKit v2 UI, the AG-UI
+bridge, the Foundry hosted agent, `azd` deploys, and both agent skills embedded
+under `.agents/skills/`.
+
+### 2. Install the Day-2 skill
+
+The development skill is published on **awesome-copilot** as
+[`foundry-hosted-agent-copilotkit`](https://awesome-copilot.github.com/skill/foundry-hosted-agent-copilotkit/):
+
+```bash
+gh skills install github/awesome-copilot foundry-hosted-agent-copilotkit
+```
+
+That skill develops an *existing* app on this stack — it does not scaffold.
+This gallery is the scaffolder that produces the bridge wiring the skill
+recognizes. (Every scaffolded app also embeds a copy at
+`.agents/skills/copilotkit-foundry-hitl/`, so this step is optional inside an
+app scaffolded here — install it to get the same guidance in any other project.)
+
+### 3. Build your application with GitHub Copilot
+
+From the scaffolded app, start the Copilot CLI and describe the app you want:
+
+```bash
+cd ~/projects/my-app
+copilot          # first run: authenticate with /login
+```
+
+> *Turn this scaffold into an assistant that can look up an order and issue a
+> refund, but require my approval before any refund is executed.*
+
+Copilot reads `AGENTS.md`, loads the embedded skills, and customizes only the
+marked extension points: `src/agent.py` (instructions + tools — it keeps ≥1 read
+tool and ≥1 `@tool(approval_mode="always_require")` consequential tool),
+`frontend/components/Chat.tsx` (render cards), and the matching prompts in
+`scripts/smoke.py` and `frontend/e2e/hitl.spec.ts`. The bridge,
+`build_hosted_agent()`, and the HITL contract stay as shipped.
+
+### 4. Prove it, run it, ship it
+
+```bash
+az login                               # once — smoke/e2e/local/deploy need Azure
 make smoke       # end-to-end HITL — read works, action PAUSES, approve executes,
                  # reject doesn't. Runs the REAL agent locally via `azd ai agent run`
-                 # (needs `az login` + a provisioned project — see `make up`)
+                 # (needs a provisioned project — `make up` once)
 make e2e         # Chromium journey: read + approve + reject + post-approval follow-up
 make local       # dev loop: REAL agent (azd ai agent run) + bridge :8080 + frontend :3000
 make up          # azd → deploy the Foundry hosted agent
+make up-app      # azd → deploy the bridge + frontend as Container Apps
 ```
 
-Then edit `src/agent.py` (tools + instructions) and `frontend/components/` (v2
-render cards). Keep the bridge, `build_hosted_agent()`, and the HITL contract as
-shipped. For continued development — adding tools, wiring HITL, shared state,
-debugging, upgrades — use the Day-2 skill
-`.agents/skills/copilotkit-foundry-hitl/` (architecture, the 7 patterns,
-troubleshooting, and workflow playbooks).
+The app is done when `make verify`, `make smoke`, and `make e2e` are all green —
+a dev server starting or one chat reply is not proof. For everything after —
+adding tools, wiring new approvals, shared state, debugging, upgrades — use the
+Day-2 skill's workflows (step 2).
 
 ## Why these choices (validated live)
 
@@ -133,14 +195,14 @@ land on the template here. See [`showcase/README.md`](showcase/README.md).
 ## Repository layout
 
 ```text
-.agents/skills/forgewright/            publishable scaffold skill (SKILL.md + script + template asset)
+.agents/skills/copilotkit-foundry-scaffold/            publishable scaffold skill (SKILL.md + script + template asset)
 .agents/skills/copilotkit-foundry-hitl/  the Day-2 dev skill (SKILL.md + references/ + workflows/)
 AGENTS.md                     how a coding agent builds an app from one prompt
 .mcp.json                     Microsoft Learn MCP (Foundry + Agent Framework docs)
 templates/<name>/             each template: bridge + hosted agent + CopilotKit v2 UI + manifest.json
 scripts/                      scaffold/package/sync/release helpers
 docs/                         template guidelines + the single-prompt workflow
-forgewright-template.yml      generated gallery manifest (do not hand-edit)
+template-manifest.yml      generated gallery manifest (do not hand-edit)
 ```
 
 ## Make targets (gallery)
@@ -148,7 +210,7 @@ forgewright-template.yml      generated gallery manifest (do not hand-edit)
 ```text
 make new-app NAME=x [DIR=.]        scaffold a runnable app from the canonical template
 make new-template NAME=x ...       add a new template variant to the gallery
-make manifest                      regenerate forgewright-template.yml + README table
+make manifest                      regenerate template-manifest.yml + README table
 make package-skill                 rebuild the self-contained scaffold skill asset
 make check                         verify generated manifests are in sync
 make release-check                 verify all templates + a fresh bundled scaffold

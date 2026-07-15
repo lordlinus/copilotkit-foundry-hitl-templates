@@ -1,9 +1,9 @@
 {
-  "name": "forgewright-showcase-ui",
+  "name": "copilotkit-foundry-showcase-ui",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Static gallery + AG-UI chat client for the forgewright showcase. Talks directly to the always-on gateway over AG-UI SSE — no CopilotKit runtime, deployable to GitHub Pages.",
+  "description": "Static gallery + AG-UI chat client for the showcase. Talks directly to the always-on gateway over AG-UI SSE — no CopilotKit runtime, deployable to GitHub Pages.",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

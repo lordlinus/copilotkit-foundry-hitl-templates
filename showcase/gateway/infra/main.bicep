@@ -9,7 +9,7 @@ param environmentName string
 param location string
 
 @description('Resource group name.')
-param resourceGroupName string = 'rg-forgewright-showcase'
+param resourceGroupName string = 'rg-copilotkit-foundry-showcase'
 
 @description('Existing Foundry / Azure AI Services account resource ID (parent of the project endpoint). The gateway managed identity is granted model-inference roles on it.')
 param foundryAccountResourceId string
@@ -25,7 +25,7 @@ param allowedOrigins string
 
 var tags = {
   'azd-env-name': environmentName
-  project: 'forgewright-showcase'
+  project: 'copilotkit-foundry-showcase'
 }
 
 var foundryRgName = split(foundryAccountResourceId, '/')[4]

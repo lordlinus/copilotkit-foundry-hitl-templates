@@ -1,4 +1,4 @@
-# forgewright showcase — convenience targets.
+# showcase — convenience targets.
 # Runs the real hosted-agent runtime + AG-UI bridge per agent; needs `az login`
 # + a Foundry project (FOUNDRY_PROJECT_ENDPOINT + AZURE_AI_MODEL_DEPLOYMENT_NAME).
 SHELL := /bin/bash

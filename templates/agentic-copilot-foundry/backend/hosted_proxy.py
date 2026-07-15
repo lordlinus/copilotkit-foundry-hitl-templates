@@ -28,7 +28,7 @@ logger = logging.getLogger("hosted_proxy")
 
 # AG-UI agent name the CopilotKit frontend talks to (<CopilotKit agent="...">),
 # distinct from the deployed hosted agent name used for the Responses calls.
-_AGUI_AGENT_NAME = __import__("os").getenv("AGENT_NAME", "forgewright_app")
+_AGUI_AGENT_NAME = __import__("os").getenv("AGENT_NAME", "agentic_copilot_foundry")
 
 
 def _latest_user_text(messages: Any) -> str:

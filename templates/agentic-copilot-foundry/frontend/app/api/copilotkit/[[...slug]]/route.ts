@@ -9,7 +9,7 @@ import { handle } from "hono/vercel";
 import { NextRequest } from "next/server";
 
 // MUST match AGENT_NAME in src/agent.py and the CopilotKit agent prop in page.tsx.
-const AGENT_NAME = "forgewright_app";
+const AGENT_NAME = "agentic_copilot_foundry";
 
 // The AG-UI backend (FastAPI + SSE) served by backend/bridge_app.py.
 const backendUrl = process.env.AG_UI_BACKEND_URL ?? "http://localhost:8080/";

@@ -1,4 +1,4 @@
-# forgewright · Agent Showcase
+# Agent Showcase — CopilotKit + Foundry HITL Templates
 
 > A live, public **portfolio of agentic apps** built on
 > [AG-UI](https://docs.ag-ui.com/introduction) + Microsoft Agent Framework +
@@ -7,9 +7,14 @@
 > every agent. Click *Try it* to chat; click *View source* to build your own.
 
 This is a **self-contained demo** that sits alongside the
-[forgewright](../README.md) template gallery without touching it. The agents it
+[copilotkit-foundry-hitl-templates](../README.md) gallery without touching it. The agents it
 serves **are** the templates in [`../templates`](../templates) — run as-is, never
-forked — so the showcase always reflects the real, shippable code.
+forked — so the showcase always reflects the real, shippable code. One extra
+agent, the [Copilot PR Assistant](agents/copilot-pr-assistant), is built on the
+**GitHub Copilot SDK** instead of Microsoft Agent Framework — same AG-UI + HITL
+architecture, different engine. (The gateway launcher skips any registry agent
+whose runtime isn't baked into the image and doesn't advertise it at `/agents`,
+so the gallery degrades gracefully instead of going down.)
 
 ---
 
@@ -53,6 +58,11 @@ showcase/
                            (ResponsesHostServer) + the AG-UI bridge, then the gateway
     Dockerfile             MCR base; build context = repo root (copies templates/<id>)
     azure.yaml + infra/    azd: one Container App (scale-to-zero), ACR, managed identity, roles
+  agents/                  gallery agents that are NOT templates
+    copilot-pr-assistant/  GitHub Copilot SDK agent (Node runtime; AG-UI + HITL)
+    copilot-pr-assistant-hosted/  its Foundry hosted-agent variant
+  docs/                    deep dives (ag-ui-architecture.md: who provides AG-UI per agent)
+  examples/                side demos (state-isolation: one agent, many isolated sessions)
   ui/                      static gallery + AG-UI chat (Vite + TypeScript)
     src/{main,chat,config}
     src/transcript.ts      pure, testable transcript renderer (forms, HITL cards)
@@ -128,7 +138,7 @@ recorded from the real agents.
 
 ```bash
 cd showcase/gateway
-azd env new forgewright-showcase
+azd env new copilotkit-foundry-showcase
 azd env set FOUNDRY_ACCOUNT_RESOURCE_ID  "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<account>"
 azd env set FOUNDRY_PROJECT_ENDPOINT     "https://<account>.services.ai.azure.com/api/projects/<project>"
 azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME "gpt-4.1"

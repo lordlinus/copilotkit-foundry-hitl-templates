@@ -26,7 +26,7 @@ test("read, reject, approve, and follow up without duplicate execution", async (
   page.on("pageerror", (error) => errors.push(error.message));
 
   await page.goto("/");
-  await expect(page.getByText("forgewright", { exact: true })).toBeVisible();
+  await expect(page.getByText("agentic-copilot-foundry", { exact: true })).toBeVisible();
 
   await send(page, READ_PROMPT);
   const readCards = page.locator(".card", { hasText: "Current value" });

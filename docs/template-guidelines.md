@@ -28,7 +28,7 @@ A template is a complete, runnable app:
 | `scripts/verify.sh`, `scripts/smoke.py`, `scripts/smoke_run.sh`, `scripts/lib-agentrun.sh`, `scripts/lib.sh` | the proof |
 | `frontend/e2e/hitl.spec.ts`, `frontend/playwright.config.ts`, `scripts/e2e_run.sh` | real-browser proof of read + approve + reject + follow-up |
 | `Makefile` + `Makefile.targets`, `run-local.sh`, `README.md`, `.gitignore` | flow + docs |
-| `AGENTS.md`, `.agents/skills/forgewright/SKILL.md` (scaffold on-ramp), `.agents/skills/copilotkit-foundry-hitl/` (Day-2 dev skill: `SKILL.md` + `references/` + `workflows/`, synced), `.mcp.json` | self-contained agent guidance |
+| `AGENTS.md`, `.agents/skills/copilotkit-foundry-scaffold/SKILL.md` (scaffold on-ramp), `.agents/skills/copilotkit-foundry-hitl/` (Day-2 dev skill: `SKILL.md` + `references/` + `workflows/`, synced), `.mcp.json` | self-contained agent guidance |
 
 ## Non-negotiables (the compatibility contract)
 
@@ -58,7 +58,7 @@ A template MUST NOT break these — `scripts/verify.sh` checks them:
 
 ## After changes
 
-Run `node scripts/generate-manifest.mjs` to refresh `forgewright-template.yml`
+Run `node scripts/generate-manifest.mjs` to refresh `template-manifest.yml`
 (root + leaf) and the README table. CI/`make check` runs `--check`.
 
 ## README expectations

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# verify.sh — read-only structural checks for a forgewright app.
+# verify.sh — read-only structural checks for an app from this gallery.
 #
 # Proves the load-bearing wiring is intact: the two AG-UI resilience patches (HITL
 # approval routing + multi-tool snapshot split, both proven load-bearing),

@@ -1,6 +1,6 @@
 // AG-UI ⇆ Copilot SDK bridge.
 //
-// Implements the forgewright HITL *replay* contract on top of the Copilot SDK so
+// Implements the gallery HITL *replay* contract on top of the Copilot SDK so
 // the existing showcase UI works unchanged:
 //   • Run 1 (prompt): stream Copilot's reasoning/text + read-tool chips. When the
 //     model calls `propose_pull_request`, emit a synthetic `confirm_changes` tool

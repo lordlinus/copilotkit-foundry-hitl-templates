@@ -1,4 +1,4 @@
-# forgewright gallery — make targets.
+# copilotkit-foundry-hitl-templates gallery — make targets.
 SHELL := /bin/bash
 TEMPLATE := templates/agentic-copilot-foundry
 DIR ?= .
@@ -6,10 +6,10 @@ DIR ?= .
 .PHONY: help new-app new-template manifest check list verify-template sync-skill-refs package-skill release-check
 
 help:
-	@echo "forgewright gallery:"
+	@echo "copilotkit-foundry-hitl-templates gallery:"
 	@echo "  make new-app NAME=<app> [DIR=<dir>]   scaffold a runnable app from the canonical template"
 	@echo "  make new-template NAME=<n> DISPLAY='..' DESC='..'   add a template variant"
-	@echo "  make manifest                         regenerate forgewright-template.yml + README table"
+	@echo "  make manifest                         regenerate template-manifest.yml + README table"
 	@echo "  make sync-skill-refs                  copy root skill references/*.md into all templates"
 	@echo "  make package-skill                    rebuild the self-contained scaffold skill asset"
 	@echo "  make check                            verify manifests + skill copies/assets are in sync"

@@ -17,13 +17,13 @@
 #      Cookiecutter's Jinja pass emits it back out literally instead of
 #      trying to resolve it as a Cookiecutter variable.
 #   4. Bundle in cookiecutter.json + hooks/ (input validation + next-steps
-#      message) from .agents/skills/forgewright/cookiecutter/.
+#      message) from .agents/skills/copilotkit-foundry-scaffold/cookiecutter/.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TEMPLATE_REL="templates/agentic-copilot-foundry"
-CC_SUPPORT="$ROOT/.agents/skills/forgewright/cookiecutter"
-DEST="$ROOT/.agents/skills/forgewright/assets/agentic-copilot-foundry.tar.gz"
+CC_SUPPORT="$ROOT/.agents/skills/copilotkit-foundry-scaffold/cookiecutter"
+DEST="$ROOT/.agents/skills/copilotkit-foundry-scaffold/assets/agentic-copilot-foundry.tar.gz"
 CHECK=0
 [ "${1:-}" = "--check" ] && CHECK=1
 
@@ -49,11 +49,11 @@ import sys
 
 root = pathlib.Path(sys.argv[1])
 
-# Order-independent: the three tokens never overlap as substrings of each other.
+# Order-independent: the two tokens never overlap as substrings of each other
+# (hyphenated vs underscored).
 TOKEN_REPLACEMENTS = [
     ("agentic-copilot-foundry", "{{ cookiecutter.app_name }}"),
-    ("forgewright_app", "{{ cookiecutter.app_name.replace('-', '_') }}"),
-    ("forgewright-app", "{{ cookiecutter.app_name }}"),
+    ("agentic_copilot_foundry", "{{ cookiecutter.app_name.replace('-', '_') }}"),
 ]
 
 for path in root.rglob("*"):

@@ -1,4 +1,4 @@
-# forgewright app targets. Include from Makefile (which sets APP_NAME / AGENT_NAME).
+# App targets. Include from Makefile (which sets APP_NAME / AGENT_NAME).
 SHELL := /bin/bash
 PY    ?= python3
 UV    ?= uv
@@ -8,7 +8,7 @@ BPY   := $(VENV)/bin/python
 .PHONY: help preflight install local verify smoke e2e up deploy up-app deploy-app clean
 
 help:
-	@echo "forgewright app ($(APP_NAME)) — targets:"
+	@echo "$(APP_NAME) — targets:"
 	@echo "  make preflight  check toolchain + install backend/frontend deps"
 	@echo "  make local      azd ai agent run (:8088) -> AG-UI bridge/proxy (:8080) -> Next.js UI (:3000)"
 	@echo "  make verify     read-only structural checks (no network)"

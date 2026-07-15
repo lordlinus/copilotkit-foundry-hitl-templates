@@ -1,13 +1,13 @@
-# AGENTS.md — forgewright
+# AGENTS.md — copilotkit-foundry-hitl-templates
 
-This repository is the **forgewright** template gallery — *not* a single app. It
+This repository is a **template gallery** — *not* a single app. It
 teaches a coding agent to build and then continually develop a **complete
 CopilotKit + AG-UI + Foundry hosted agent application**, with native
 human-in-the-loop approval.
 
 ## Two skills
 
-- **`forgewright`** (`.agents/skills/forgewright/`) — the **scaffold on-ramp**:
+- **`copilotkit-foundry-scaffold`** (`.agents/skills/copilotkit-foundry-scaffold/`) — the **scaffold on-ramp**:
   instantiate the canonical template and customize it to the user's prompt. Small.
 - **`copilotkit-foundry-hitl`** (`.agents/skills/copilotkit-foundry-hitl/`) — the
   **Day-2 development** skill: the architecture, the 7 AG-UI patterns, the
@@ -22,7 +22,7 @@ human-in-the-loop approval.
 When the user asks for an agentic app ("build me an app that …", "an assistant
 that can … with approval before …"), do this — do not hand the user manual steps:
 
-1. **Load the skill:** read `.agents/skills/forgewright/SKILL.md` in full. It is
+1. **Load the skill:** read `.agents/skills/copilotkit-foundry-scaffold/SKILL.md` in full. It is
    the scaffold recipe and hands off to `copilotkit-foundry-hitl` for everything
    after the initial customization.
 2. **Scaffold:** `scripts/new-app.sh <app-name> [target-dir]` instantiates the
@@ -61,8 +61,8 @@ message answering is **not** proof. The app is done only when `make verify`,
   byte-identical copy. Edit the root copy, never a template's copy directly, then run
   `scripts/sync-skill-refs.sh` (or `make sync-skill-refs`) to push the change out;
   `make check` / `scripts/sync-skill-refs.sh --check` fails if a template's copy has
-  drifted (or has a stray file). The **`forgewright` scaffold skill's `SKILL.md` is
-  NOT synced** — its content is intentionally different per copy (root =
+  drifted (or has a stray file). The `copilotkit-foundry-scaffold` skill's `SKILL.md` is
+  **NOT synced** — its content is intentionally different per copy (root =
   build-a-new-app framing; each template's copy = customize/run/deploy-this-app
   framing) and stays hand-authored. The scaffold skill has no `references/`; those
   moved to the dev skill.

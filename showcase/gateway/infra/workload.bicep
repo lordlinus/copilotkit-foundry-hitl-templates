@@ -10,7 +10,7 @@ var acrName = 'acr${replace(resourceToken, '-', '')}'
 var envName = 'cae-${resourceToken}'
 var lawName = 'log-${resourceToken}'
 var identityName = 'id-fw-showcase-${resourceToken}'
-var appName = 'ca-forgewright-showcase'
+var appName = 'ca-copilotkit-foundry-showcase'
 
 resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: identityName

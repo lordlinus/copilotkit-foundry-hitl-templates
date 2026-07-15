@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Minimal pass/fail helpers for forgewright app scripts.
+# Minimal pass/fail helpers for app scripts.
 set -euo pipefail
 
 _PASS="\033[32mPASS\033[0m"

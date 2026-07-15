@@ -10,7 +10,7 @@ import {
 import { z } from "zod";
 
 // MUST match the provider `agent` prop and AGENT_NAME in src/agent.py.
-const AGENT_NAME = "forgewright_app";
+const AGENT_NAME = "agentic_copilot_foundry";
 
 function asPayload(result: unknown): any {
   if (!result) return {};

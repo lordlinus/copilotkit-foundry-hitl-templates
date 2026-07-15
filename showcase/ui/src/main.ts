@@ -2,23 +2,22 @@
 //   • LEFT rail: agent picker, the selected agent's guided sample questions
 //     (click to run), its tool list (capabilities at a glance), and a source link.
 //   • RIGHT: the live AG-UI chat for the selected agent.
-// This replaces the card-gallery + "Try it" drawer so a newcomer understands the
-// offering and can run it in seconds — in the spirit of the isolation demo.
 
 import { API_BASE, sourceUrl, type AgentInfo } from "./config";
 import { Chat } from "./chat";
 import "./styles.css";
 
 // Bundled fallback so the console still renders if the gateway is asleep.
+// Keep entries in sync with ../agents.json (the live gateway serves that file).
 const FALLBACK_AGENTS: AgentInfo[] = [
   {
     id: "agentic-copilot-foundry",
     title: "Agentic Assistant (HITL)",
-    agentName: "forgewright_app",
-    tagline: "Read freely, but every consequential action pauses for your approval.",
+    agentName: "agentic_copilot_foundry",
+    tagline: "The canonical stack: read freely, but every consequential action pauses for your approval.",
     description:
-      "A minimal but complete AG-UI + Foundry hosted-agent app. It can read a value and apply a delta — any change pauses on a human-in-the-loop approval card before it executes.",
-    stack: ["AG-UI", "Microsoft Agent Framework", "Azure AI Foundry"],
+      "A minimal but complete CopilotKit + AG-UI + Foundry hosted-agent app. It can read a value and apply a delta — and any change pauses on a human-in-the-loop approval card before it executes.",
+    stack: ["Next.js", "AG-UI", "Microsoft Agent Framework", "Azure AI Foundry"],
     sourcePath: "templates/agentic-copilot-foundry",
     tryPrompts: ["What is the current value?", "Apply a delta of 25."],
     tools: [
@@ -206,11 +205,11 @@ function render(state: ConsoleState): void {
   const header = el("header", "topbar");
   header.innerHTML = `
     <span class="logo">⚒︎</span>
-    <span class="brand">forgewright</span>
+    <span class="brand">CopilotKit + Foundry HITL</span>
     <span class="brand-sub">Agent Console</span>
     <span class="spacer"></span>
     <span class="status ${state.live ? "live" : "idle"}">${state.live ? "● gateway live" : "○ gateway asleep"}</span>
-    <a class="topbar-link" href="https://github.com/lordlinus/forgewright" target="_blank" rel="noopener">GitHub ↗</a>
+    <a class="topbar-link" href="https://github.com/lordlinus/copilotkit-foundry-hitl-templates" target="_blank" rel="noopener">GitHub ↗</a>
   `;
   app.appendChild(header);
 
@@ -222,6 +221,11 @@ function render(state: ConsoleState): void {
         <a href="https://docs.ag-ui.com/introduction" target="_blank" rel="noopener">AG-UI</a>
         protocol with native <strong>human-in-the-loop approval</strong>. Pick an agent, then a
         sample question.</p>
+      <p>Build your own: scaffold with
+        <a href="https://github.com/lordlinus/copilotkit-foundry-hitl-templates#getting-started" target="_blank" rel="noopener">copilotkit-foundry-hitl-templates</a>,
+        then develop with the
+        <a href="https://awesome-copilot.github.com/skill/foundry-hosted-agent-copilotkit/" target="_blank" rel="noopener">foundry-hosted-agent-copilotkit</a>
+        skill.</p>
     </div>
     <div class="rail-section-title">Agents</div>
     <div id="agent-list" class="agent-list"></div>

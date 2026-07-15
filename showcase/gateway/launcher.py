@@ -147,16 +147,26 @@ def main() -> None:
     signal.signal(signal.SIGTERM, _terminate_all)
     signal.signal(signal.SIGINT, _terminate_all)
 
+    # An agent whose runtime isn't in this image (e.g. a Node agent in a
+    # Python-only build) must not take the whole gallery down: skip it loudly
+    # and tell the gateway which agents actually run, so /agents only
+    # advertises cards a visitor can use.
+    started: list[str] = []
     for agent in agents:
-        _children.extend(_spawn_backend(agent))
+        try:
+            _children.extend(_spawn_backend(agent))
+            started.append(agent["id"])
+        except Exception as exc:  # noqa: BLE001 — one bad agent must not kill the rest
+            _log(f"WARNING: skipping '{agent['id']}' — {exc}")
     for agent in agents:
-        _wait_ready(agent)
+        if agent["id"] in started:
+            _wait_ready(agent)
 
-    _log(f"starting gateway on :{GATEWAY_PORT}")
+    _log(f"starting gateway on :{GATEWAY_PORT} (agents: {', '.join(started) or 'none'})")
     gateway = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", GATEWAY_PORT],
         cwd=str(GATEWAY_DIR),
-        env={**os.environ},
+        env={**os.environ, "SHOWCASE_STARTED_AGENTS": ",".join(started)},
     )
     _children.append(gateway)
 

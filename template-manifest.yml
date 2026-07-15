@@ -1,7 +1,7 @@
 apiVersion: v1
 metadata:
-  name: forgewright
-  displayName: forgewright Templates
+  name: copilotkit-foundry-hitl-templates
+  displayName: CopilotKit + Foundry HITL Templates
   description: One-prompt CopilotKit + AG-UI + Foundry hosted-agent apps with HITL
 entries:
   - path: templates/agentic-copilot-foundry
