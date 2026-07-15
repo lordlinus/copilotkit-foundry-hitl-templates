@@ -79,6 +79,15 @@ jobs:
         working-directory: showcase/gateway
         run: azd deploy --no-prompt
 
+      - name: Verify every showcase agent is a REAL Foundry hosted agent
+        # DEPLOYMENT-VERIFIED gate — deliberately separate from (and required
+        # in addition to) the smoke/e2e protocol tests. Catches the exact
+        # regression this repo shipped once: a gateway silently running each
+        # agent's code locally instead of forwarding to a deployed hosted
+        # agent. Must be green before the URL below is reported as live.
+        working-directory: showcase/gateway
+        run: bash scripts/verify-hosted.sh
+
       - name: Report gateway URL
         working-directory: showcase/gateway
         run: |

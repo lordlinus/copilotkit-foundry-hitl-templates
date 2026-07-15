@@ -5,18 +5,21 @@ UV    ?= uv
 VENV  := backend/.venv
 BPY   := $(VENV)/bin/python
 
-.PHONY: help preflight install local verify smoke e2e up deploy up-app deploy-app clean
+.PHONY: help preflight install local verify smoke e2e up deploy up-app deploy-app verify-deployed clean
 
 help:
 	@echo "$(APP_NAME) — targets:"
 	@echo "  make preflight  check toolchain + install backend/frontend deps"
 	@echo "  make local      azd ai agent run (:8088) -> AG-UI bridge/proxy (:8080) -> Next.js UI (:3000)"
 	@echo "  make verify     read-only structural checks (no network)"
-	@echo "  make smoke      end-to-end HITL test against the REAL agent (azd ai agent run)"
-	@echo "  make e2e        Chromium UI test against the REAL agent (read/reject/approve/follow-up)"
+	@echo "  make smoke      end-to-end HITL test against the REAL agent (azd ai agent run) — DEV-VERIFIED, not deployment proof"
+	@echo "  make e2e        Chromium UI test against the REAL agent (read/reject/approve/follow-up) — DEV-VERIFIED, not deployment proof"
 	@echo "  make up         deploy hosted Foundry agent via azd (needs az login)"
 	@echo "  make up-app     deploy the bridge + frontend as Container Apps via azd (needs 'make up' first)"
 	@echo "  make deploy-app redeploy the bridge + frontend after a code change (skips provisioning)"
+	@echo "  make verify-deployed  DEPLOYMENT-VERIFIED gate: confirms 'make up' produced a REAL active Foundry"
+	@echo "                        hosted agent and a live invoke reaches it — required before calling this"
+	@echo "                        app deployed/live/showcased. verify/smoke/e2e passing is NOT this proof."
 	@echo "  make clean      remove venvs / node_modules / .next"
 
 install:
@@ -52,6 +55,9 @@ up-app:
 
 deploy-app:
 	@cd deploy && azd deploy
+
+verify-deployed:
+	@bash scripts/verify-deployed.sh
 
 clean:
 	@rm -rf $(VENV) frontend/node_modules frontend/.next backend/__pycache__ src/__pycache__

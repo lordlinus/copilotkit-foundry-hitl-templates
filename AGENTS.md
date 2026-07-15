@@ -35,19 +35,31 @@ that can … with approval before …"), do this — do not hand the user manual
    (CopilotKit v2 cards). Keep `backend/{bridge_app,hosted_proxy,hosted_client}.py`,
    `build_hosted_agent()` (FoundryChatClient), the CopilotKit route, and the HITL
    `confirm_changes` contract **unchanged**.
-4. **Prove it:** from the new app, run `make verify` (structural),
+4. **Prove it (dev-verified tier):** from the new app, run `make verify` (structural),
    `make smoke` (protocol), and `make e2e` (real Chromium UI). The latter two
    drive the REAL agent locally via `azd ai agent run` and need `az login` + a
-   provisioned project. All three MUST pass.
-5. **Run / deploy (optional):** `make local` for the dev loop; `make up` to deploy
-   the hosted Foundry agent via `azd` (needs `az login` to the Foundry tenant).
+   provisioned project. All three MUST pass — but passing them is **not** proof
+   anything is deployed; it only proves the bridge/HITL protocol works against a
+   local run of the agent code.
+5. **Deploy (REQUIRED before calling it deployed, live, or adding it to a
+   showcase — do NOT skip):** `make up` to deploy the hosted Foundry agent via
+   `azd` (needs `az login` to the Foundry tenant), then `make up-app` for the
+   bridge + frontend. Confirm with `make verify-deployed` (`azd ai agent show`
+   reports `active`, and a live invoke actually reached that endpoint, not a
+   local process) and one live browser E2E against it. `make local` remains the
+   quick dev-loop shortcut and proves nothing about deployment.
 6. **Continue development with the Day-2 skill:** for any change beyond the initial
    customization, load `.agents/skills/copilotkit-foundry-hitl/SKILL.md` and pick a
    workflow.
 
-**Golden rule:** `azd` reporting SUCCESS, the dev server starting, or one chat
-message answering is **not** proof. The app is done only when `make verify`,
-`make smoke`, and `make e2e` pass. Never declare success on an unverified build.
+**Golden rule — two tiers, don't conflate them:** `azd` reporting SUCCESS, the dev
+server starting, or one chat message answering is **not** proof of anything.
+**Dev-verified** = `make verify` + `make smoke` + `make e2e` pass (fast iteration
+gate only). **Deployment-verified** = `make up` + `make up-app` +
+`make verify-deployed` + a live E2E against the real Foundry endpoint — this tier,
+not the dev-verified one, is what's required before you say the app is deployed,
+live, shipped, or featured anywhere public. Never declare either without running
+its own gate.
 
 ## Maintaining the gallery
 

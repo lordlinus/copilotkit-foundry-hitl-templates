@@ -1,11 +1,13 @@
 # showcase — convenience targets.
-# Runs the real hosted-agent runtime + AG-UI bridge per agent; needs `az login`
-# + a Foundry project (FOUNDRY_PROJECT_ENDPOINT + AZURE_AI_MODEL_DEPLOYMENT_NAME).
+# The gateway runs ONLY a thin AG-UI<->Responses bridge per agent; it forwards
+# every turn to the REAL Foundry hosted agent deployed via each template's
+# hosted/ azd project (or showcase/agents/<id>/). Needs `az login` + a Foundry
+# project (FOUNDRY_PROJECT_ENDPOINT).
 SHELL := /bin/bash
 GATEWAY_DIR := gateway
 UI_DIR := ui
 
-.PHONY: help install gateway ui-dev ui-build verify test-dom smoke deploy pages-build clean
+.PHONY: help install gateway ui-dev ui-build verify test-dom smoke deploy verify-hosted pages-build clean
 
 help:
 	@echo "make install      - set up the gateway venv (uv) + UI deps (npm)"
@@ -16,6 +18,9 @@ help:
 	@echo "make test-dom     - run the Tier-1 jsdom DOM tests only"
 	@echo "make smoke        - end-to-end HITL smoke via the gateway (needs az login + Foundry)"
 	@echo "make deploy       - azd up the gateway Container App (from gateway/)"
+	@echo "make verify-hosted - DEPLOYMENT-VERIFIED gate: every agents.json entry must be a"
+	@echo "                     REAL, enabled Foundry hosted agent. make verify/smoke passing"
+	@echo "                     is NOT this proof — run this before calling the showcase live."
 	@echo ""
 	@echo "Real Foundry needs: az login + FOUNDRY_PROJECT_ENDPOINT + AZURE_AI_MODEL_DEPLOYMENT_NAME"
 
@@ -53,6 +58,9 @@ smoke:
 
 deploy:
 	cd $(GATEWAY_DIR) && azd up
+
+verify-hosted:
+	cd $(GATEWAY_DIR) && bash scripts/verify-hosted.sh
 
 clean:
 	rm -rf $(UI_DIR)/dist $(GATEWAY_DIR)/.venv

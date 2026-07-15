@@ -28,10 +28,18 @@ bridge; CopilotKit v2 UI):
    BRIDGE (backend/bridge_app.py → HostedProxyAgent) forwards each turn + approvals
 ```
 
-**Golden rule:** `azd` SUCCESS, a dev server starting, or one chat reply is **not**
-proof. Because all logic is server-side, the app is done only when `make verify`,
-`make smoke` (the bridge against the REAL agent run locally via `azd ai agent run`),
-and `make e2e` (real Chromium) pass. Never declare success on an unverified build.
+**Golden rule — two tiers, don't conflate them:**
+- **Dev-verified** (`make verify` + `make smoke` + `make e2e` green): proves the
+  bridge/HITL protocol works against the REAL agent code running locally
+  (`azd ai agent run`). This is **not** proof anything is deployed — it is the
+  fast dev-loop gate, nothing more.
+- **Deployment-verified** (`make up` + `make up-app` + `make verify-deployed` +
+  one live browser E2E against the actual Foundry endpoint): REQUIRED before you
+  say this app is "deployed", "live", "shipped", or add it to any showcase/gallery.
+  `azd` SUCCESS, a dev server starting, or one chat reply answering correctly is
+  **never** sufficient for that claim on its own — confirm the agent shows
+  `active` in Foundry (`azd ai agent show`) and that the invocation you tested
+  actually hit that endpoint, not a local process.
 
 ## 0. Orient
 
@@ -91,9 +99,14 @@ make smoke      # the BRIDGE against the REAL agent (azd ai agent run): read wor
 make e2e        # real Chromium UI: read, approve, reject, and follow-up after approval.
 ```
 
-All three must be green. Then `make local` (dev loop) and, in a Foundry-enabled tenant,
-`make up` (azd → hosted agent) + `make up-app` (azd → the bridge + frontend Container
-Apps, wired keyless to that agent) followed by a **live browser E2E** — the real DoD.
+All three must be green — this is the **dev-verified** tier only. Then `make local`
+(dev loop) and, in a Foundry-enabled tenant, `make up` (azd → hosted agent) +
+`make up-app` (azd → the bridge + frontend Container Apps, wired keyless to that
+agent). **Before calling the app deployed, live, or adding it to a showcase, run
+`make verify-deployed`** (confirms `azd ai agent show` reports `active` and that a
+live invoke actually reached that endpoint, not a local process) **and** a live
+browser E2E against it — that combination, not dev-verified alone, is the real DoD
+for a deployment claim.
 
 ## Hand off
 

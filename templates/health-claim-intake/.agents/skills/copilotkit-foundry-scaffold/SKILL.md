@@ -16,9 +16,15 @@ and forwards `mcp_approval_response` on HITL approve so the gated tool re-execut
 server-side. For local dev, `azd ai agent run` runs the REAL agent on your machine
 and `make smoke`/`make local` point the bridge at it (DIRECT mode) — no mock.
 
-**Golden rule:** a dev server starting or `azd` SUCCESS is **not** proof. Done =
-`make verify` + `make smoke` + `make e2e` green AND a **live browser E2E** against the deployed
-agent (HITL approve re-executes; reject doesn't).
+**Golden rule — two tiers, don't conflate them:**
+- **Dev-verified** (`make verify` + `make smoke` + `make e2e` green): proves the
+  bridge/HITL protocol works against the REAL agent code running locally
+  (`azd ai agent run`). Not proof anything is deployed.
+- **Deployment-verified** (`make up` + `make up-app` + `make verify-deployed` +
+  a live browser E2E against the actual Foundry endpoint): REQUIRED before you
+  call this app "deployed", "live", "shipped", or add it to any showcase/gallery.
+  Confirm `azd ai agent show` reports `active` and the invocation you tested hit
+  that endpoint, not `azd ai agent run` locally.
 
 ## For deep development, use the Day-2 skill
 
@@ -69,6 +75,8 @@ make up-app     # azd → deploy the bridge + frontend as Container Apps (deploy
 
 Deployed UI: `make up-app` provisions the bridge (internal-only Container App, granted
 the `Foundry Agent Consumer` role on the Foundry account) + the frontend (public
-Container App) — `HostedProxyAgent` drives the deployed agent. Then a **live browser
-E2E** — the real DoD: HITL approve (re-executes, state changes) AND reject (no
+Container App) — `HostedProxyAgent` drives the deployed agent. **Before calling this
+deployed/live/showcased, run `make verify-deployed`** (confirms `azd ai agent show`
+is `active` and a live invoke actually reached that endpoint) **and** a live browser
+E2E — the real DoD: HITL approve (re-executes, state changes) AND reject (no
 change), plus tool-render cards.

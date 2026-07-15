@@ -27,8 +27,15 @@ workflows (add-tool, wire-hitl, debug-hitl, shared-state, upgrade-loop).
 bridge in `frontend/app/api/copilotkit/[[...slug]]/route.ts`.
 
 
-## Prove it
+## Prove it — two tiers, don't conflate them
 
-`make verify` (structural), `make smoke` (protocol), and `make e2e` (real Chromium
-UI) must pass. The latter two drive the REAL agent via `azd ai agent run` and need
-`az login` + a provisioned project. `azd`/dev-server starting is not proof.
+**Dev-verified:** `make verify` (structural), `make smoke` (protocol), and
+`make e2e` (real Chromium UI) must pass. The latter two drive the REAL agent via
+`azd ai agent run` and need `az login` + a provisioned project. `azd`/dev-server
+starting is not proof. But passing these three is **not** proof anything is
+deployed — they run against a local process, never a Foundry-registered agent.
+
+**Deployment-verified (REQUIRED before calling this deployed, live, or adding it
+to a showcase):** `make up` + `make up-app`, then `make verify-deployed` (confirms
+`azd ai agent show` reports `active` and a live invoke actually reached that
+endpoint, not `azd ai agent run` locally) and one live browser E2E against it.

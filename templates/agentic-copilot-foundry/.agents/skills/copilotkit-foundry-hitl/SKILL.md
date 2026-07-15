@@ -27,12 +27,15 @@ through a **light AG-UI bridge** (`HostedProxyAgent`) from a **CopilotKit v2** U
      Same code: LOCAL (`azd ai agent run`, DIRECT mode) and DEPLOYED (platform).
 ```
 
-**Golden rule (unchanged from scaffold):** `azd` SUCCESS, a dev server starting, or
-one chat reply is **not** proof. Because all logic is server-side, a change is done
-only when `make verify` (structural) + `make smoke` (the bridge against the REAL
-agent run locally via `azd ai agent run`) pass, and — for the deployed path — a
-**live browser E2E** covers the patterns you touched (HITL approve **and** reject).
-Apps scaffolded from this gallery expose that gate as `make e2e`.
+**Golden rule (two tiers, unchanged from scaffold):** `azd` SUCCESS, a dev server
+starting, or one chat reply is **not** proof of anything. **Dev-verified** —
+`make verify` (structural) + `make smoke` (the bridge against the REAL agent run
+locally via `azd ai agent run`) — is the fast iteration gate; it never proves an
+agent is deployed. **Deployment-verified** — `make up`/`make up-app` already run,
+`make verify-deployed` confirming the agent shows `active` in Foundry and a live
+invoke actually reached that endpoint, plus a **live browser E2E** — is REQUIRED
+before you call a change done on the deployed path, live, or ready to showcase.
+Apps scaffolded from this gallery expose the dev-verified gate as `make e2e`.
 
 ## Orient (read before changing anything)
 
@@ -117,3 +120,9 @@ Route by intent — each playbook is a focused, verifiable procedure:
 - [ ] No secrets, endpoints, or app-specific hard-coding committed.
 - [ ] **Live** browser E2E for any touched pattern on the deployed path — HITL
       approve **and** reject, plus any shared/predictive state round-trip and cards.
+- [ ] **Before calling anything deployed, live, or showcased:** `make verify-deployed`
+      confirms `azd ai agent show <name>` reports `active` — a REAL Foundry
+      `type: hosted` agent, not a local `azd ai agent run`/`python app.py` process
+      wearing the same code — and that the invoke you tested actually reached that
+      endpoint. A working chat reply is not evidence of this; a plausible answer can
+      come from either path, which is exactly how this gets missed.
