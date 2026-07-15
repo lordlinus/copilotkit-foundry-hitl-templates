@@ -27,14 +27,28 @@ azd auth login --check-status >/dev/null 2>&1 && pass "azd logged in" \
 # NOTE: `azd env get-values` exits 0 and synthesizes AZURE_ENV_NAME from the
 # directory name even when no env exists — only specific keys prove anything.
 info "LOCAL azd env (./.azure — what make local/smoke/e2e run the agent against)"
-ENVVALS="$(azd env get-values 2>/dev/null || true)"
-for v in FOUNDRY_PROJECT_ENDPOINT AZURE_AI_MODEL_DEPLOYMENT_NAME; do
-  printf '%s\n' "$ENVVALS" | grep -q "^$v=" && pass "$v set" \
-    || fail "$v missing — run 'azd ai agent run' once interactively (Ctrl-C when serving), or: azd env set $v <value>"
-done
+# `azd env get-values` PROMPTS (and can create an env) when none exists — gate
+# it behind `azd env list` (read-only) and close stdin so it can never hang.
+ENVVALS=""
+if azd env list -o json 2>/dev/null </dev/null | grep -q '"IsDefault":[[:space:]]*true'; then
+  ENVVALS="$(azd env get-values 2>/dev/null </dev/null || true)"
+fi
+printf '%s\n' "$ENVVALS" | grep -q "^FOUNDRY_PROJECT_ENDPOINT=" && pass "FOUNDRY_PROJECT_ENDPOINT set" \
+  || fail "FOUNDRY_PROJECT_ENDPOINT missing — run 'azd ai agent run' once interactively (Ctrl-C when serving), or: azd env set FOUNDRY_PROJECT_ENDPOINT <project endpoint>"
+# the model name may instead be a literal default in azure.yaml (the shipped shape)
+model_literal="$(grep -A1 -m1 'name: AZURE_AI_MODEL_DEPLOYMENT_NAME' azure.yaml | awk '/value:/{print $2}')"
+case "$model_literal" in '${'*) model_literal="";; esac
+if printf '%s\n' "$ENVVALS" | grep -q "^AZURE_AI_MODEL_DEPLOYMENT_NAME="; then
+  pass "AZURE_AI_MODEL_DEPLOYMENT_NAME set (azd env)"
+elif [ -n "$model_literal" ]; then
+  pass "AZURE_AI_MODEL_DEPLOYMENT_NAME defaults to '$model_literal' (azure.yaml literal; azd env can override)"
+else
+  fail "AZURE_AI_MODEL_DEPLOYMENT_NAME missing — azure.yaml carries a \${} placeholder and the azd env doesn't define it: azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME <model-deployment-name>"
+fi
 
 info "HOSTED azd env (hosted/.azure — what make up / up-app deploy)"
-if (cd hosted && azd env get-values 2>/dev/null || true) | grep -q '^AZURE_SUBSCRIPTION_ID='; then
+if (cd hosted && azd env list -o json 2>/dev/null </dev/null | grep -q '"IsDefault":[[:space:]]*true' \
+      && azd env get-values 2>/dev/null </dev/null || true) | grep -q '^AZURE_SUBSCRIPTION_ID='; then
   pass "hosted env exists"
 else
   warn "no hosted env yet — 'make up' creates it (required before up-app / verify-deployed)"

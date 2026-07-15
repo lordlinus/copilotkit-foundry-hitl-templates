@@ -93,6 +93,16 @@ elif printf '%s' "$env_model" | grep -q '^\${'; then
 else
   fail "hosted model DRIFT: env AZURE_AI_MODEL_DEPLOYMENT_NAME='$env_model' vs declared deployment '$dep_model' — container crashes at startup"
 fi
+# Same trap on the LOCAL pair: the root azure.yaml must carry a literal model
+# default (the azd env can override it per-machine) — a bare ${} placeholder
+# resolves to EMPTY for anyone who hasn't run `azd env set`, and the local agent
+# dies with "Model is required" (the exact step-8 failure this guards against).
+root_env_model=$(grep -A1 -m1 'name: AZURE_AI_MODEL_DEPLOYMENT_NAME' azure.yaml | awk '/value:/{print $2}')
+if [ -n "$root_env_model" ] && ! printf '%s' "$root_env_model" | grep -q '^\${'; then
+  pass "root azure.yaml carries a literal model default ($root_env_model — azd env overrides per-machine)"
+else
+  fail "root azure.yaml AZURE_AI_MODEL_DEPLOYMENT_NAME is '$root_env_model' — a \${} placeholder resolves EMPTY and 'azd ai agent run' crashes with 'Model is required'; set a literal default"
+fi
 
 # ── The bridge: HostedProxyAgent → hosted agent (azd ai agent run locally) ──
 grep -q 'add_agent_framework_fastapi_endpoint' backend/bridge_app.py \

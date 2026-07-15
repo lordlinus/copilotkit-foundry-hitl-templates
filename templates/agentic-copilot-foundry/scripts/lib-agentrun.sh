@@ -30,10 +30,19 @@ start_agent_and_bridge() {
   # `azd ai agent run` boots the agent and it dies deep inside a Python stack
   # trace (KeyError: FOUNDRY_PROJECT_ENDPOINT / "Model is required…"). The values
   # come from the LOCAL azd env at the app root (./.azure) or the shell env.
-  local ENVVALS MISSING="" v
-  ENVVALS="$( (cd "$ROOT" && azd env get-values 2>/dev/null) || true )"
+  # `azd env get-values` PROMPTS (hangs a non-TTY run) when no env exists — gate
+  # it behind `azd env list` (read-only) and close stdin so it can never hang.
+  local ENVVALS="" MISSING="" v model_literal
+  if (cd "$ROOT" && azd env list -o json 2>/dev/null </dev/null) | grep -q '"IsDefault":[[:space:]]*true'; then
+    ENVVALS="$( (cd "$ROOT" && azd env get-values 2>/dev/null </dev/null) || true )"
+  fi
+  # the model name may be a literal default in azure.yaml (the shipped shape) —
+  # only demand it from the env when azure.yaml carries a ${} placeholder
+  model_literal="$(grep -A1 -m1 'name: AZURE_AI_MODEL_DEPLOYMENT_NAME' "$ROOT/azure.yaml" | awk '/value:/{print $2}')"
+  case "$model_literal" in '${'*) model_literal="";; esac
   for v in FOUNDRY_PROJECT_ENDPOINT AZURE_AI_MODEL_DEPLOYMENT_NAME; do
     [ -n "${!v:-}" ] && continue
+    [ "$v" = "AZURE_AI_MODEL_DEPLOYMENT_NAME" ] && [ -n "$model_literal" ] && continue
     printf '%s\n' "$ENVVALS" | grep -q "^$v=" || MISSING="$MISSING $v"
   done
   if [ -n "$MISSING" ]; then
