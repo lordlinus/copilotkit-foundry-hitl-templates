@@ -16,6 +16,39 @@ start_agent_and_bridge() {
     return 1
   fi
 
+  # Same fail-fast for the bridge port: anything already on it (typically a stale
+  # bridge from an interrupted run) means our uvicorn can't bind and the run dies
+  # late with an unhelpful "bridge not ready".
+  if (exec 3<>"/dev/tcp/127.0.0.1/$BRIDGE_PORT") 2>/dev/null; then
+    exec 3>&- 3<&- || true
+    echo "✗ :$BRIDGE_PORT is already in use — the bridge can't bind. Stop whatever holds"
+    echo "  it first:  fuser -k $BRIDGE_PORT/tcp"
+    return 1
+  fi
+
+  # Fail fast if the agent's required config can't be resolved — otherwise
+  # `azd ai agent run` boots the agent and it dies deep inside a Python stack
+  # trace (KeyError: FOUNDRY_PROJECT_ENDPOINT / "Model is required…"). The values
+  # come from the LOCAL azd env at the app root (./.azure) or the shell env.
+  local ENVVALS MISSING="" v
+  ENVVALS="$( (cd "$ROOT" && azd env get-values 2>/dev/null) || true )"
+  for v in FOUNDRY_PROJECT_ENDPOINT AZURE_AI_MODEL_DEPLOYMENT_NAME; do
+    [ -n "${!v:-}" ] && continue
+    printf '%s\n' "$ENVVALS" | grep -q "^$v=" || MISSING="$MISSING $v"
+  done
+  if [ -n "$MISSING" ]; then
+    echo "✗ the local agent has no model/project config — missing:$MISSING"
+    echo "  These live in the LOCAL azd env at the app root (./.azure), which is"
+    echo "  SEPARATE from hosted/.azure (created by 'make up'). One-time fix:"
+    echo "    azd ai agent run    # interactive: pick subscription + Foundry project;"
+    echo "                        # Ctrl-C once it's serving"
+    echo "  or set the values directly:"
+    echo "    azd env set FOUNDRY_PROJECT_ENDPOINT https://<account>.services.ai.azure.com/api/projects/<project>"
+    echo "    azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME <model-deployment-name>"
+    echo "  ('make doctor' checks all prerequisites with the fix for each.)"
+    return 1
+  fi
+
   echo "▸ azd ai agent run (real agent, local :$AGENT_PORT) …"
   ( cd "$ROOT" && azd ai agent run --no-inspector --port "$AGENT_PORT" >/tmp/forge-agent.log 2>&1 ) &
   AGENT_PID=$!

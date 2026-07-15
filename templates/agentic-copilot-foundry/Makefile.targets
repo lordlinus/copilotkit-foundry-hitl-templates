@@ -5,22 +5,39 @@ UV    ?= uv
 VENV  := backend/.venv
 BPY   := $(VENV)/bin/python
 
-.PHONY: help preflight install local verify smoke e2e up deploy up-app deploy-app verify-deployed clean
+.DEFAULT_GOAL := help
+.PHONY: help doctor preflight install local verify smoke e2e up deploy up-app deploy-app verify-deployed clean
 
 help:
-	@echo "$(APP_NAME) — targets:"
-	@echo "  make preflight  check toolchain + install backend/frontend deps"
-	@echo "  make local      azd ai agent run (:8088) -> AG-UI bridge/proxy (:8080) -> Next.js UI (:3000)"
-	@echo "  make verify     read-only structural checks (no network)"
-	@echo "  make smoke      end-to-end HITL test against the REAL agent (azd ai agent run) — DEV-VERIFIED, not deployment proof"
-	@echo "  make e2e        Chromium UI test against the REAL agent (read/reject/approve/follow-up) — DEV-VERIFIED, not deployment proof"
-	@echo "  make up         deploy hosted Foundry agent via azd (needs az login)"
-	@echo "  make up-app     deploy the bridge + frontend as Container Apps via azd (needs 'make up' first)"
-	@echo "  make deploy-app redeploy the bridge + frontend after a code change (skips provisioning)"
-	@echo "  make verify-deployed  DEPLOYMENT-VERIFIED gate: confirms 'make up' produced a REAL active Foundry"
-	@echo "                        hosted agent and a live invoke reaches it — required before calling this"
-	@echo "                        app deployed/live/showcased. verify/smoke/e2e passing is NOT this proof."
-	@echo "  make clean      remove venvs / node_modules / .next"
+	@echo "$(APP_NAME) — the path, in order ('make doctor' checks your setup at any point):"
+	@echo ""
+	@echo "  one-time setup"
+	@echo "    1. make verify             offline structural gate — green before you touch anything"
+	@echo "    2. az login && azd auth login    azd keeps its own credential; BOTH are needed"
+	@echo "    3. make up                 provision + deploy the hosted Foundry agent"
+	@echo "                               (first run prompts: env name, subscription, location)"
+	@echo "    4. azd ai agent run        once, interactively at the app root — creates the LOCAL"
+	@echo "                               azd env (./.azure) for smoke/e2e/local; Ctrl-C when serving"
+	@echo ""
+	@echo "  prove it (the dev gate — rerun after every change; NOT deployment proof)"
+	@echo "    5. make smoke              end-to-end HITL vs the REAL agent run locally: read works,"
+	@echo "                               action PAUSES, approve executes, reject doesn't"
+	@echo "    6. make e2e                the same journey driven in a real Chromium browser"
+	@echo "       make local              dev loop: agent :8088 + bridge :8080 + UI :3000"
+	@echo ""
+	@echo "  ship it (required before calling the app deployed / live)"
+	@echo "    7. make up-app             deploy the bridge + frontend as Container Apps"
+	@echo "    8. make verify-deployed    a REAL active Foundry agent answers a live invoke"
+	@echo ""
+	@echo "  utilities"
+	@echo "    make doctor      check tools, logins, azd envs, ports — with the fix for each failure"
+	@echo "    make preflight   install backend venv + frontend deps"
+	@echo "    make deploy      redeploy the hosted agent after src/agent.py changes (skips provisioning)"
+	@echo "    make deploy-app  redeploy the bridge + frontend after code changes (skips provisioning)"
+	@echo "    make clean       remove venvs / node_modules / .next"
+
+doctor:
+	@bash scripts/doctor.sh
 
 install:
 	@command -v $(UV) >/dev/null || { echo "uv is required — install from https://docs.astral.sh/uv/"; exit 1; }
@@ -32,11 +49,11 @@ preflight: install
 	@command -v node >/dev/null || { echo "node is required"; exit 1; }
 	@echo "✓ preflight ok"
 
-local: install
-	@bash run-local.sh
-
 verify:
 	@bash scripts/verify.sh
+
+up:
+	@cd hosted && azd up
 
 smoke: install
 	@bash scripts/smoke_run.sh
@@ -44,20 +61,20 @@ smoke: install
 e2e: install
 	@bash scripts/e2e_run.sh
 
-up:
-	@cd hosted && azd up
-
-deploy:
-	@cd hosted && azd deploy
+local: install
+	@bash run-local.sh
 
 up-app:
 	@cd deploy && azd up
 
-deploy-app:
-	@cd deploy && azd deploy
-
 verify-deployed:
 	@bash scripts/verify-deployed.sh
+
+deploy:
+	@cd hosted && azd deploy
+
+deploy-app:
+	@cd deploy && azd deploy
 
 clean:
 	@rm -rf $(VENV) frontend/node_modules frontend/.next backend/__pycache__ src/__pycache__

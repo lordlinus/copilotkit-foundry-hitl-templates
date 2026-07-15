@@ -11,5 +11,7 @@ node_modules/
 frontend/.next/
 frontend/.env.local
 
-# azd
-hosted/.azure/
+# azd — `azd ai agent run` creates ./.azure at the app root; `make up` /
+# `make up-app` create hosted/.azure and deploy/.azure. All hold env-specific
+# endpoints/subscription ids and must never be committed.
+.azure/

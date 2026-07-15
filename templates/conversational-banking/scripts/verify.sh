@@ -47,6 +47,42 @@ else
   fail "hosted name DRIFT: Makefile='$app_name' azure.yaml='$hosted_azure_name' agent.yaml='$hosted_agent_yaml_name' manifest='$hosted_manifest_name'"
 fi
 
+# ── Resource + protocol-version consistency across the paired manifests ────
+# Each azd project (root LOCAL-DEV, hosted/ DEPLOY) declares cpu/memory in BOTH
+# its azure.yaml (azd's own copy, for infra generation) and its agent.yaml (the
+# AgentSchema ContainerAgent definition Foundry actually reads) — these two
+# copies aren't cross-read by tooling, so drift is silent. Same for the
+# protocol version across agent.yaml/agent.manifest.yaml, where drift is NOT
+# silent (the hosted runtime fails fast at startup) — see references/architecture.md.
+root_azure_cpu=$(grep -m1 'cpu:' azure.yaml | sed -E 's/.*cpu:[[:space:]]*"?([^"[:space:]]+)"?.*/\1/')
+root_azure_mem=$(grep -m1 'memory:' azure.yaml | sed -E 's/.*memory:[[:space:]]*//')
+root_agent_cpu=$(grep -m1 'cpu:' agent.yaml | sed -E 's/.*cpu:[[:space:]]*"?([^"[:space:]]+)"?.*/\1/')
+root_agent_mem=$(grep -m1 'memory:' agent.yaml | sed -E 's/.*memory:[[:space:]]*//')
+if [ "$root_azure_cpu" = "$root_agent_cpu" ] && [ "$root_azure_mem" = "$root_agent_mem" ]; then
+  pass "root resources consistent: azure.yaml == agent.yaml (cpu=$root_agent_cpu, memory=$root_agent_mem)"
+else
+  fail "root resources DRIFT: azure.yaml cpu=$root_azure_cpu/mem=$root_azure_mem vs agent.yaml cpu=$root_agent_cpu/mem=$root_agent_mem"
+fi
+
+hosted_azure_cpu=$(grep -m1 'cpu:' hosted/azure.yaml | sed -E 's/.*cpu:[[:space:]]*"?([^"[:space:]]+)"?.*/\1/')
+hosted_azure_mem=$(grep -m1 'memory:' hosted/azure.yaml | sed -E 's/.*memory:[[:space:]]*//')
+hosted_agent_cpu=$(grep -m1 'cpu:' hosted/responses/agent.yaml | sed -E 's/.*cpu:[[:space:]]*"?([^"[:space:]]+)"?.*/\1/')
+hosted_agent_mem=$(grep -m1 'memory:' hosted/responses/agent.yaml | sed -E 's/.*memory:[[:space:]]*//')
+if [ "$hosted_azure_cpu" = "$hosted_agent_cpu" ] && [ "$hosted_azure_mem" = "$hosted_agent_mem" ]; then
+  pass "hosted resources consistent: azure.yaml == agent.yaml (cpu=$hosted_agent_cpu, memory=$hosted_agent_mem)"
+else
+  fail "hosted resources DRIFT: azure.yaml cpu=$hosted_azure_cpu/mem=$hosted_azure_mem vs agent.yaml cpu=$hosted_agent_cpu/mem=$hosted_agent_mem"
+fi
+
+root_agent_proto=$(grep -m1 'version:' agent.yaml | sed -E 's/.*version:[[:space:]]*//')
+hosted_agent_proto=$(grep -m1 'version:' hosted/responses/agent.yaml | sed -E 's/.*version:[[:space:]]*//')
+hosted_manifest_proto=$(grep -m1 'version:' hosted/responses/agent.manifest.yaml | sed -E 's/.*version:[[:space:]]*//')
+if [ "$root_agent_proto" = "$hosted_agent_proto" ] && [ "$root_agent_proto" = "$hosted_manifest_proto" ]; then
+  pass "protocol version consistent: agent.yaml (root) == hosted agent.yaml == agent.manifest.yaml ($root_agent_proto)"
+else
+  fail "protocol version DRIFT: root agent.yaml=$root_agent_proto hosted agent.yaml=$hosted_agent_proto manifest=$hosted_manifest_proto — hosted runtime will RuntimeError at startup on mismatch"
+fi
+
 # ── The bridge: HostedProxyAgent → hosted agent (azd ai agent run locally) ──
 grep -q 'add_agent_framework_fastapi_endpoint' backend/bridge_app.py \
   && pass "bridge mounts add_agent_framework_fastapi_endpoint (AG-UI endpoint)" \

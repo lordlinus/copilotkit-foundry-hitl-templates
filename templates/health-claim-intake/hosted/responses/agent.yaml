@@ -1,4 +1,10 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/AgentSchema/refs/heads/main/schemas/v1.0/ContainerAgent.yaml
+#
+# DEPLOYED agent definition, read by `cd hosted && azd up` (see ../azure.yaml's
+# `agentDefinitionPath`). Mirrors, but is NOT read by, the LOCAL-DEV pair at the
+# template root (./agent.yaml + ./azure.yaml, used by `azd ai agent run`) — keep
+# `protocols[].version` in sync with the root agent.yaml AND agent.manifest.yaml
+# (the runtime fails fast on a mismatch); `resources` in sync with ../azure.yaml.
 kind: hosted
 name: health-claim-intake
 protocols:

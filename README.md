@@ -142,21 +142,44 @@ tool and ≥1 `@tool(approval_mode="always_require")` consequential tool),
 
 ### 4. Prove it, run it, ship it
 
+Run these in order — the first three are one-time setup:
+
 ```bash
-az login                               # once — smoke/e2e/local/deploy need Azure
+az login && azd auth login    # once — azd keeps its own credential, both are needed
+make up          # azd → provision the Foundry project + deploy the hosted agent
+                 # (first run prompts for an env name, subscription, location)
+azd ai agent run # once, interactively at the app root — creates the LOCAL azd env
+                 # that smoke/e2e/local run against; Ctrl-C once it's serving
 make smoke       # end-to-end HITL — read works, action PAUSES, approve executes,
                  # reject doesn't. Runs the REAL agent locally via `azd ai agent run`
-                 # (needs a provisioned project — `make up` once)
 make e2e         # Chromium journey: read + approve + reject + post-approval follow-up
 make local       # dev loop: REAL agent (azd ai agent run) + bridge :8080 + frontend :3000
-make up          # azd → deploy the Foundry hosted agent
 make up-app      # azd → deploy the bridge + frontend as Container Apps
+make verify-deployed  # deployment gate: a REAL active Foundry agent answers a live invoke
 ```
 
-The app is done when `make verify`, `make smoke`, and `make e2e` are all green —
-a dev server starting or one chat reply is not proof. For everything after —
+Two azd environments are involved: `make up` creates `hosted/.azure/` (the deployed
+agent) while `azd ai agent run` creates `./.azure/` at the app root (the local dev
+run) — that's why the interactive `azd ai agent run` comes before the first
+`make smoke` on a fresh app.
+
+The app is **dev-done** when `make verify`, `make smoke`, and `make e2e` are all
+green — a dev server starting or one chat reply is not proof — and **deployed**
+only after `make up-app` + `make verify-deployed` pass. For everything after —
 adding tools, wiring new approvals, shared state, debugging, upgrades — use the
 Day-2 skill's workflows (step 2).
+
+**If something fails:**
+
+- `make smoke` assertion failures with no visible error — the agent's own log is
+  `/tmp/forge-agent.log`. A 403 `…agents/write` there means the signed-in identity
+  lacks the **Azure AI User** role on the Foundry project (log in with the account
+  that provisioned it, or grant the role).
+- "already in use" / "bridge not ready" — stale processes from an interrupted run:
+  `fuser -k 8080/tcp 8088/tcp 3000/tcp`.
+- `make up` fails on quota — the default deploy requests `gpt-4.1`
+  (GlobalStandard, capacity 100); lower `capacity` in `hosted/azure.yaml` or pick
+  a subscription/region with quota.
 
 ## Why these choices (validated live)
 

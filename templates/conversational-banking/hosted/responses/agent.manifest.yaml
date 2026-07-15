@@ -1,4 +1,9 @@
 name: conversational-banking
+# Gallery/publish manifest for the deployed hosted agent (read by
+# agent_framework_foundry_hosting at runtime — see references/architecture.md's
+# "Protocol v2.0" note). `template.protocols[].version` MUST equal agent.yaml's
+# (this directory) and the template root's agent.yaml, or the hosted runtime
+# fails fast with a protocol-mismatch RuntimeError — see scripts/verify.sh.
 description: >
   A conversational banking agent with native human-in-the-loop approval: balance
   and transaction reads run freely, while every money movement (transfer_funds,

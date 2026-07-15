@@ -1,5 +1,10 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
-
+#
+# DEPLOY azd project for the hosted agent, run via `cd hosted && azd up` (`make
+# up`). Separate from the template-root azure.yaml (LOCAL-DEV only, `azd ai agent
+# run`) and from ../deploy/azure.yaml (bridge + frontend Container Apps). Keep
+# `config.container.resources` equal to responses/agent.yaml's `resources` (both
+# describe this same deployed instance) — see scripts/verify.sh.
 requiredVersions:
     extensions:
         azure.ai.agents: '>=0.1.0-preview'

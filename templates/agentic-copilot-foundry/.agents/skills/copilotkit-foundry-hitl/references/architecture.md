@@ -182,6 +182,32 @@ What v2.0 actually changes (read from the PR diff, not assumed):
 └── Makefile(+.targets) preflight / local / verify / smoke / up / deploy / clean.
 ```
 
+### The 3 azd projects, and why azure.yaml + agent.yaml duplicate each other
+
+There are **three separate azd projects** in one app, each with its own `azure.yaml`
+(and the two agent ones each pair with an `agent.yaml`) — nothing cross-reads
+between them, so keep the paired fields in sync by hand (`scripts/verify.sh`
+checks name/resources/protocol-version drift on every `make verify`):
+
+| Project (cwd) | azure.yaml | agent.yaml / manifest | Run by | Deploys? |
+| --- | --- | --- | --- | --- |
+| root | `./azure.yaml` — `host: azure.ai.agent`, `startupCommand: python app.py` | `./agent.yaml` | `azd ai agent run` (`make local`/`make smoke`) | No — local process only, needs to sit next to `src/` |
+| `hosted/` | `hosted/azure.yaml` — same host, `agentDefinitionPath: responses/agent.yaml`, model `deployments` | `hosted/responses/agent.yaml` + `agent.manifest.yaml` | `azd up` (`make up`) | Yes — publishes the Foundry hosted agent |
+| `deploy/` | `deploy/azure.yaml` — `host: containerapp`, bridge + frontend services | (none — plain Container Apps, no agent manifest) | `azd up` (`make up-app`) | Yes — bridge + frontend, points at the already-deployed hosted agent |
+
+Why root and `hosted/` both exist for the "same" agent: `azd ai agent run` runs
+the agent as a local, non-containerized process and needs its `azure.yaml`/
+`agent.yaml` at the template root (sibling to `src/`); `azd up` in `hosted/`
+builds and publishes the real container image from a different Docker build
+context. Each pair independently declares `resources` (root: local dev sizing;
+`hosted/`: real deploy sizing — these are allowed to differ) and the hosted pair
+additionally declares `protocols[].version` (root's, `hosted/responses/agent.yaml`'s,
+and `agent.manifest.yaml`'s **must** be equal — see the "Protocol v2.0" section
+below for the exact runtime failure this guards against). This root+`hosted/`
+split is intentional and hand-tuned (see hosted-deploy.md) — don't collapse it
+into one folder; the fix for the duplication is the `verify.sh` consistency
+checks, not removing the duplication.
+
 ## Proving it (Definition of Done)
 
 `azd` SUCCESS / a server starting is **not** proof. Done = `make verify` +

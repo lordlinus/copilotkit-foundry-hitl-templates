@@ -38,17 +38,21 @@ How a coding agent turns one sentence into a verified, running app.
 4. **Prove it.**
    ```bash
    cd ~/projects/product-orderer
-   make verify     # structural checks
+   make verify     # structural checks — offline, run it first
+   az login && azd auth login   # once — azd keeps its own credential
+   make up         # provision the Foundry project + deploy the hosted agent
+   azd ai agent run   # once, interactively at the app root — creates the LOCAL
+                      # azd env that smoke/e2e/local use; Ctrl-C once serving
    make smoke      # end-to-end HITL against the REAL agent (azd ai agent run)
    make e2e        # real browser: read, approve, reject, follow-up after approval
    ```
-   All three must be green. This is the bar for "done". `make smoke`/`make e2e`
-   need `az login` +
-   a provisioned Foundry project (`make up` once).
+   All three must be green. This is the bar for **dev-done** (it proves the
+   bridge/HITL protocol against a local run of the agent code — not that
+   anything is deployed).
 
-5. **Run / deploy (optional).** `make local` for the dev loop; set
-   `FOUNDRY_PROJECT_ENDPOINT` + `AZURE_AI_MODEL_DEPLOYMENT_NAME` and
-   `make up` to publish the hosted Foundry agent.
+5. **Run / deploy.** `make local` for the dev loop. Before calling the app
+   *deployed* or *live*: `make up-app` (bridge + frontend Container Apps) and
+   `make verify-deployed` (a REAL active Foundry agent answers a live invoke).
 
 6. **Continue development.** For any change beyond the initial customization — a new
    tool, a new approval, shared state, a bug, an upgrade — load

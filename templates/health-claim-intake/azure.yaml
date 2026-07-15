@@ -1,5 +1,10 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
-
+#
+# LOCAL-DEV azd project, used only by `azd ai agent run` (see run-local.sh /
+# scripts/lib-agentrun.sh — invoked from this directory so src/ resolves). It is
+# NOT deployed; `hosted/azure.yaml` is the deploy manifest for the same agent.
+# `config.container.resources` here should stay equal to ./agent.yaml's
+# `resources` (both describe this same local project) — see scripts/verify.sh.
 requiredVersions:
     extensions:
         azure.ai.agents: '>=0.1.0-preview'
@@ -16,6 +21,6 @@ services:
         config:
             container:
                 resources:
-                    cpu: "0.5"
+                    cpu: "1"
                     memory: 1Gi
             startupCommand: python app.py

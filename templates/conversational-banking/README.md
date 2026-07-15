@@ -21,22 +21,39 @@ it in `src/agent.py` with your core-banking / ledger integration.
 ## Getting started
 
 ```bash
-# Run the REAL agent locally (needs `az login` + a provisioned project — see `make up`):
-make smoke        # bridge → REAL agent via `azd ai agent run`; asserts the HITL flow
-make verify       # read-only structural checks
-make e2e          # built CopilotKit UI in Chromium: read/reject/approve/follow-up
+make verify       # read-only structural checks — green before you touch anything
 
-# Local dev loop (needs a Foundry project + `az login`):
-cp backend/.env.example backend/.env       # set FOUNDRY_PROJECT_ENDPOINT + model
-make local                                 # backend :8080 + frontend :3000
+# One-time setup — everything below needs Azure (azd keeps its own credential,
+# so BOTH logins are needed):
+az login && azd auth login
 
-# Deploy the hosted Foundry agent (needs az login to the Foundry tenant):
+# Provision + deploy the hosted Foundry agent. The first run prompts for an
+# env name, subscription, and location, and creates hosted/.azure/:
 make up
 
+# One-time: create the LOCAL azd env (./.azure at the app root) that
+# smoke/e2e/local run against — answer the prompts, Ctrl-C once it's serving:
+azd ai agent run
+
+# Prove it — the REAL agent running locally, no mock:
+make smoke        # bridge → REAL agent via `azd ai agent run`; asserts the HITL flow
+make e2e          # built CopilotKit UI in Chromium: read/reject/approve/follow-up
+
+# Local dev loop:
+make local        # REAL agent (azd ai agent run) + bridge :8080 + frontend :3000
+
 # Deploy the bridge + frontend as two Container Apps, wired keyless to the
-# agent `make up` just deployed (needs `make up` first):
+# agent `make up` deployed, then prove the deployment is real:
 make up-app
+make verify-deployed   # a REAL active Foundry agent answers a live invoke
 ```
+
+`make doctor` checks every prerequisite (tools, logins, azd envs, ports) with the
+fix for each failure — run it first when anything fails. If `make smoke` fails on
+assertions with no visible error, the agent's own log is
+`/tmp/forge-agent.log` — a 403 `…agents/write` there means the signed-in identity
+lacks the **Azure AI User** role on the Foundry project. "Already in use" / "bridge
+not ready" means stale processes: `fuser -k 8080/tcp 8088/tcp 3000/tcp`.
 
 > Uses **uv** for the Python venv — install it from https://docs.astral.sh/uv/.
 
@@ -62,6 +79,7 @@ Open http://localhost:3000 and try: *"what are my balances?"* →
 
 | Target | Does |
 | --- | --- |
+| `make doctor` | check tools, logins, azd envs, ports — with the fix for each failure |
 | `make preflight` | install backend venv + frontend deps |
 | `make local` | run bridge + frontend |
 | `make verify` | read-only structural checks |
@@ -69,10 +87,12 @@ Open http://localhost:3000 and try: *"what are my balances?"* →
 | `make e2e` | real-browser HITL journey against the REAL agent |
 | `make up` / `make deploy` | `azd up` / `azd deploy` the hosted agent |
 | `make up-app` / `make deploy-app` | `azd up` / `azd deploy` the bridge + frontend Container Apps (`deploy/`) |
+| `make verify-deployed` | deployment gate: the hosted agent is `active` in Foundry and a live invoke reaches it |
 | `make clean` | remove venv / node_modules / .next |
 
 ## Definition of Done
 
 Not done until `make verify`, `make smoke`, **and** `make e2e` are green, and — for the deployed
-path — a live browser E2E shows HITL approve re-executing and reject not. See
+path — `make verify-deployed` passes and a live browser E2E shows HITL approve
+re-executing and reject not. See
 `.agents/skills/copilotkit-foundry-hitl/SKILL.md`.

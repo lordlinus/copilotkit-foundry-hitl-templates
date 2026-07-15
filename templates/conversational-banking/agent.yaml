@@ -1,9 +1,15 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/AgentSchema/refs/heads/main/schemas/v1.0/ContainerAgent.yaml
+#
+# LOCAL-DEV pair with ./azure.yaml, read by `azd ai agent run` (started from this
+# directory, next to src/ — see app.py). Mirrors, but is NOT read by, the deployed
+# agent definition at hosted/responses/agent.yaml — keep `protocols[].version` and
+# `resources` in sync with that file by hand (see scripts/verify.sh and
+# references/architecture.md's File map for the full list of paired fields).
 kind: hosted
 name: conversational-banking
 protocols:
   - protocol: responses
-    version: 1.0.0
+    version: 2.0.0
 resources:
   cpu: "1"
   memory: 1Gi
