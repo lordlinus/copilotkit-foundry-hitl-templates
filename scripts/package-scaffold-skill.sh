@@ -12,7 +12,7 @@
 #   2. Rewrite the three literal naming tokens to Jinja expressions
 #      (`{{ cookiecutter.app_name }}` / its underscored form).
 #   3. Escape the one genuine `{{...}}` collision — hosted/responses/
-#      agent.manifest.yaml's OWN `{{ PARAM }}` init-time template syntax
+#      (historic) agent.manifest.yaml's OWN `{{ PARAM }}` init-time template syntax
 #      (unrelated to Cookiecutter; see the note in hosted-deploy.md) — so
 #      Cookiecutter's Jinja pass emits it back out literally instead of
 #      trying to resolve it as a Cookiecutter variable.
@@ -66,18 +66,8 @@ for path in root.rglob("*"):
     if changed != text:
         path.write_text(changed, encoding="utf-8")
 
-# The ONE genuine collision: agent.manifest.yaml's own `{{ PARAM }}` init-time
-# template syntax (Foundry's `azd ai agent init -m <manifest-url>`), unrelated
-# to Cookiecutter. Escape it so Jinja emits it back out literally.
-manifest = root / "hosted" / "responses" / "agent.manifest.yaml"
-if manifest.exists():
-    text = manifest.read_text(encoding="utf-8")
-    escaped = text.replace(
-        "{{AZURE_AI_MODEL_DEPLOYMENT_NAME}}",
-        "{{ '{{' }}AZURE_AI_MODEL_DEPLOYMENT_NAME{{ '}}' }}",
-    )
-    if escaped != text:
-        manifest.write_text(escaped, encoding="utf-8")
+# (The old agent.manifest.yaml `{{ PARAM }}` Jinja-collision escape lived here;
+# the unified azure.yaml shape removed that file, so there is nothing to escape.)
 PYEOF
 
 cp "$CC_SUPPORT/cookiecutter.json" "$STAGE/cookiecutter.json"

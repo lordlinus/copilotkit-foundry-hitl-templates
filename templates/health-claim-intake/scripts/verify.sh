@@ -19,8 +19,15 @@ cd "$ROOT"
 [ -f backend/bridge_app.py ]       && pass "backend/bridge_app.py present (the AG-UI bridge)" || fail "backend/bridge_app.py missing"
 [ -f hosted/azure.yaml ]           && pass "hosted/azure.yaml present"   || fail "hosted/azure.yaml missing"
 [ -f hosted/responses/main.py ]    && pass "hosted/responses/main.py present" || fail "hosted/responses/main.py missing"
-[ -f hosted/responses/agent.yaml ] && pass "hosted/responses/agent.yaml present" || fail "hosted/responses/agent.yaml missing"
-[ -f hosted/responses/agent.manifest.yaml ] && pass "hosted/responses/agent.manifest.yaml present" || fail "agent.manifest.yaml missing"
+grep -qE '^[[:space:]]+kind:[[:space:]]*hosted' hosted/azure.yaml \
+  && pass "hosted/azure.yaml carries the inline agent definition (kind: hosted)" \
+  || fail "hosted/azure.yaml has no inline agent definition (kind: hosted) — azd up can't resolve the agent"
+grep -qE '^[[:space:]]+kind:[[:space:]]*hosted' azure.yaml \
+  && pass "root azure.yaml carries the inline agent definition (kind: hosted)" \
+  || fail "root azure.yaml has no inline agent definition (kind: hosted) — azd ai agent run can't resolve the agent"
+[ ! -f agent.yaml ] && [ ! -f hosted/agent.yaml ] && [ ! -f hosted/responses/agent.manifest.yaml ] \
+  && pass "unified shape only (no deprecated agent.yaml / agent.manifest.yaml on disk)" \
+  || warn "deprecated agent.yaml / agent.manifest.yaml present — azd reads the INLINE definition; stale copies drift silently"
 [ -f hosted/responses/Dockerfile ] && pass "hosted/responses/Dockerfile present" || fail "hosted Dockerfile missing"
 [ -f scripts/e2e_run.sh ]          && pass "scripts/e2e_run.sh present" || fail "scripts/e2e_run.sh missing"
 [ -f frontend/e2e/hitl.spec.ts ]   && pass "frontend HITL browser E2E present" || fail "frontend/e2e/hitl.spec.ts missing"
@@ -37,50 +44,54 @@ else
   fail "runtime name DRIFT: agent.py='$runtime_name' provider='$provider_agent' route='$route_agent'"
 fi
 hosted_azure_name=$(awk '/^name:/{print $2; exit}' hosted/azure.yaml)
-hosted_agent_yaml_name=$(awk '/^name:/{print $2; exit}' hosted/responses/agent.yaml)
-hosted_manifest_name=$(awk '/^name:/{print $2; exit}' hosted/responses/agent.manifest.yaml)
+hosted_inline_name=$(grep -m1 -E '^ {8}name:' hosted/azure.yaml | awk '{print $2}')
+root_inline_name=$(grep -m1 -E '^ {8}name:' azure.yaml | awk '{print $2}')
 app_name=$(awk '/^APP_NAME[[:space:]]*:/{print $3; exit}' Makefile)
-if [ -n "$hosted_azure_name" ] && [ "$hosted_azure_name" = "$hosted_agent_yaml_name" ] \
-  && [ "$hosted_azure_name" = "$hosted_manifest_name" ] && [ "$hosted_azure_name" = "$app_name" ]; then
-  pass "hosted name consistent across Makefile + azure.yaml + agent.yaml + manifest ($hosted_azure_name)"
+if [ -n "$hosted_azure_name" ] && [ "$hosted_azure_name" = "$hosted_inline_name" ] \
+  && [ "$hosted_azure_name" = "$root_inline_name" ] && [ "$hosted_azure_name" = "$app_name" ]; then
+  pass "hosted name consistent: Makefile == hosted azure.yaml (project + inline agent) == root inline agent ($hosted_azure_name)"
 else
-  fail "hosted name DRIFT: Makefile='$app_name' azure.yaml='$hosted_azure_name' agent.yaml='$hosted_agent_yaml_name' manifest='$hosted_manifest_name'"
+  fail "hosted name DRIFT: Makefile='$app_name' hosted azure.yaml='$hosted_azure_name' hosted inline='$hosted_inline_name' root inline='$root_inline_name'"
 fi
 
-# ── Resource + protocol-version consistency across the paired manifests ────
-# Each azd project (root LOCAL-DEV, hosted/ DEPLOY) declares cpu/memory in BOTH
-# its azure.yaml (azd's own copy, for infra generation) and its agent.yaml (the
-# AgentSchema ContainerAgent definition Foundry actually reads) — these two
-# copies aren't cross-read by tooling, so drift is silent. Same for the
-# protocol version across agent.yaml/agent.manifest.yaml, where drift is NOT
-# silent (the hosted runtime fails fast at startup) — see references/architecture.md.
-root_azure_cpu=$(grep -m1 'cpu:' azure.yaml | sed -E 's/.*cpu:[[:space:]]*"?([^"[:space:]]+)"?.*/\1/')
-root_azure_mem=$(grep -m1 'memory:' azure.yaml | sed -E 's/.*memory:[[:space:]]*//')
-root_agent_cpu=$(grep -m1 'cpu:' agent.yaml | sed -E 's/.*cpu:[[:space:]]*"?([^"[:space:]]+)"?.*/\1/')
-root_agent_mem=$(grep -m1 'memory:' agent.yaml | sed -E 's/.*memory:[[:space:]]*//')
-if [ "$root_azure_cpu" = "$root_agent_cpu" ] && [ "$root_azure_mem" = "$root_agent_mem" ]; then
-  pass "root resources consistent: azure.yaml == agent.yaml (cpu=$root_agent_cpu, memory=$root_agent_mem)"
+# ── Resource + protocol-version consistency across the two azd projects ────
+# The unified azure.yaml shape (azd azure.ai.agents >=1.0.0-beta) folded the
+# old agent.yaml/agent.manifest.yaml copies into each azure.yaml, so the only
+# cross-file contract left is between the root (LOCAL-DEV) and hosted (DEPLOY)
+# projects: both describe the same agent, and `protocols[].version` drift is
+# NOT silent (the hosted runtime fails fast at startup) — see
+# references/architecture.md.
+grep -qE '^[[:space:]]+cpu:' azure.yaml && grep -qE '^[[:space:]]+memory:' azure.yaml \
+  && pass "root azure.yaml declares container.resources (cpu + memory)" \
+  || fail "root azure.yaml missing container.resources — azd ai agent run falls back to defaults"
+grep -qE '^[[:space:]]+cpu:' hosted/azure.yaml && grep -qE '^[[:space:]]+memory:' hosted/azure.yaml \
+  && pass "hosted/azure.yaml declares container.resources (cpu + memory)" \
+  || fail "hosted/azure.yaml missing container.resources — deploy falls back to defaults"
+
+# the version line that FOLLOWS `- protocol:` (azd's canonical rewrite of
+# azure.yaml alphabetizes keys, so a bare 'first version:' grep would match the
+# deployments' model version instead)
+root_proto=$(grep -A1 -m1 -E '^[[:space:]]+- protocol:' azure.yaml | awk '/version:/{print $2}')
+hosted_proto=$(grep -A1 -m1 -E '^[[:space:]]+- protocol:' hosted/azure.yaml | awk '/version:/{print $2}')
+if [ -n "$root_proto" ] && [ "$root_proto" = "$hosted_proto" ]; then
+  pass "protocol version consistent: root azure.yaml == hosted azure.yaml ($root_proto)"
 else
-  fail "root resources DRIFT: azure.yaml cpu=$root_azure_cpu/mem=$root_azure_mem vs agent.yaml cpu=$root_agent_cpu/mem=$root_agent_mem"
+  fail "protocol version DRIFT: root azure.yaml=$root_proto hosted azure.yaml=$hosted_proto — hosted runtime will RuntimeError at startup on mismatch"
 fi
 
-hosted_azure_cpu=$(grep -m1 'cpu:' hosted/azure.yaml | sed -E 's/.*cpu:[[:space:]]*"?([^"[:space:]]+)"?.*/\1/')
-hosted_azure_mem=$(grep -m1 'memory:' hosted/azure.yaml | sed -E 's/.*memory:[[:space:]]*//')
-hosted_agent_cpu=$(grep -m1 'cpu:' hosted/responses/agent.yaml | sed -E 's/.*cpu:[[:space:]]*"?([^"[:space:]]+)"?.*/\1/')
-hosted_agent_mem=$(grep -m1 'memory:' hosted/responses/agent.yaml | sed -E 's/.*memory:[[:space:]]*//')
-if [ "$hosted_azure_cpu" = "$hosted_agent_cpu" ] && [ "$hosted_azure_mem" = "$hosted_agent_mem" ]; then
-  pass "hosted resources consistent: azure.yaml == agent.yaml (cpu=$hosted_agent_cpu, memory=$hosted_agent_mem)"
+# The deployed model env var must name the model deployment actually declared in
+# hosted/azure.yaml — an azd-env ${} placeholder resolves to EMPTY when the azd
+# env doesn't define it, and the hosted container then crashes at startup
+# (session_not_ready on every invoke). Deployment name = `name:` at 14 spaces
+# (the deployments list item's own key, distinct from model.name/sku.name).
+env_model=$(grep -A1 -m1 'name: AZURE_AI_MODEL_DEPLOYMENT_NAME' hosted/azure.yaml | awk '/value:/{print $2}')
+dep_model=$(grep -m1 -E '^ {14}name:' hosted/azure.yaml | awk '{print $2}')
+if [ -n "$env_model" ] && [ "$env_model" = "$dep_model" ]; then
+  pass "hosted model env var matches the declared model deployment ($env_model)"
+elif printf '%s' "$env_model" | grep -q '^\${'; then
+  fail "hosted AZURE_AI_MODEL_DEPLOYMENT_NAME is an azd-env placeholder ($env_model) — resolves EMPTY unless the azd env sets it; hardcode the deployment name"
 else
-  fail "hosted resources DRIFT: azure.yaml cpu=$hosted_azure_cpu/mem=$hosted_azure_mem vs agent.yaml cpu=$hosted_agent_cpu/mem=$hosted_agent_mem"
-fi
-
-root_agent_proto=$(grep -m1 'version:' agent.yaml | sed -E 's/.*version:[[:space:]]*//')
-hosted_agent_proto=$(grep -m1 'version:' hosted/responses/agent.yaml | sed -E 's/.*version:[[:space:]]*//')
-hosted_manifest_proto=$(grep -m1 'version:' hosted/responses/agent.manifest.yaml | sed -E 's/.*version:[[:space:]]*//')
-if [ "$root_agent_proto" = "$hosted_agent_proto" ] && [ "$root_agent_proto" = "$hosted_manifest_proto" ]; then
-  pass "protocol version consistent: agent.yaml (root) == hosted agent.yaml == agent.manifest.yaml ($root_agent_proto)"
-else
-  fail "protocol version DRIFT: root agent.yaml=$root_agent_proto hosted agent.yaml=$hosted_agent_proto manifest=$hosted_manifest_proto — hosted runtime will RuntimeError at startup on mismatch"
+  fail "hosted model DRIFT: env AZURE_AI_MODEL_DEPLOYMENT_NAME='$env_model' vs declared deployment '$dep_model' — container crashes at startup"
 fi
 
 # ── The bridge: HostedProxyAgent → hosted agent (azd ai agent run locally) ──

@@ -1,8 +1,10 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
-
+#
+# The agent definition lives INLINE on the service entry (unified shape, azd
+# azure.ai.agents >=1.0.0-beta — no standalone agent.yaml/agent.manifest.yaml).
 requiredVersions:
     extensions:
-        azure.ai.agents: '>=0.1.0-preview'
+        azure.ai.agents: '>=1.0.0-beta.5'
 name: copilot-pr-assistant-hosted
 services:
     copilot-pr-assistant-hosted:
@@ -13,10 +15,37 @@ services:
             path: Dockerfile
             context: .
             remoteBuild: true
-        config:
-            container:
-                resources:
-                    cpu: "1"
-                    memory: 2Gi
+        kind: hosted
+        name: copilot-pr-assistant-hosted
+        protocols:
+            - protocol: responses
+              version: 2.0.0
+        # Direct code deploy (no Docker/ACR): Foundry remote-builds the runtime
+        # from this source. The github-copilot-sdk wheel is py3-none-<platform>,
+        # so it resolves on the python_3_13 remote runtime. Container deploy is
+        # the fallback (remove codeConfiguration to use the Dockerfile).
+        codeConfiguration:
+            runtime: python_3_13
+            entryPoint: app.py
+            dependencyResolution: remote_build
+        # Inference is through the GitHub Copilot SDK against an APIM/BYOM
+        # gateway. APIM_KEY is a secret — wire it from Key Vault for production;
+        # here it comes from the azd environment. Only gpt-5 / o-series models
+        # work with the Copilot SDK.
+        environmentVariables:
+            - name: APIM_GATEWAY
+              value: ${APIM_GATEWAY}
+            - name: APIM_PATH_PREFIX
+              value: ${APIM_PATH_PREFIX}
+            - name: APIM_KEY
+              value: ${APIM_KEY}
+            - name: MODEL_NAME
+              value: ${MODEL_NAME=gpt-5.4-mini}
+            - name: COPILOT_HOME
+              value: /tmp/.copilot-home
+        container:
+            resources:
+                cpu: "1"
+                memory: 2Gi
 infra:
     provider: microsoft.foundry

@@ -17,7 +17,7 @@ param foundryAccountResourceId string
 @description('Foundry project endpoint the hosted agent was deployed into, e.g. https://<account>.services.ai.azure.com/api/projects/<project>. Passed to the bridge as FOUNDRY_PROJECT_ENDPOINT.')
 param foundryProjectEndpoint string
 
-@description('Name of the deployed Foundry hosted agent (see hosted/agent.yaml `name:` / `make up` output). Passed to the bridge as HOSTED_AGENT_NAME.')
+@description('Name of the deployed Foundry hosted agent (see the inline `name:` in hosted/azure.yaml / `make up` output). Passed to the bridge as HOSTED_AGENT_NAME.')
 param hostedAgentName string
 
 var tags = {

@@ -14,7 +14,10 @@ cd "$(dirname "$0")"
 
 ROOT="$(cd .. && pwd)"
 HOSTED_DIR="$ROOT/hosted"
-AGENT_ID="$(grep -E '^name:' "$HOSTED_DIR/responses/agent.yaml" | head -1 | sed -E 's/^name:\s*//')"
+# agent name from the INLINE definition in hosted/azure.yaml (unified shape).
+# Match `name:` at the service-key indent (8 spaces) ONLY — azd's canonical
+# rewrite alphabetizes keys, putting deployments' model name first otherwise.
+AGENT_ID="$(grep -m1 -E '^ {8}name:' "$HOSTED_DIR/azure.yaml" | awk '{print $2}')"
 info "app root: $ROOT"
 info "hosted agent id: $AGENT_ID"
 
@@ -26,7 +29,7 @@ cd "$HOSTED_DIR"
 # 1. The agent must exist in Foundry and be active — NOT just that `azd up`
 #    printed SUCCESS at some point in the past. This also gives us the real
 #    Responses endpoint, straight from the platform, not reconstructed by hand.
-SHOW_JSON="$(AGENT_DEFINITION_PATH=responses/agent.yaml azd ai agent show "$AGENT_ID" -o json 2>/dev/null || true)"
+SHOW_JSON="$(azd ai agent show "$AGENT_ID" -o json 2>/dev/null || true)"
 if [ -z "$SHOW_JSON" ]; then
   fail "azd ai agent show '$AGENT_ID' returned nothing — has 'make up' been run for this azd env?"
   finish

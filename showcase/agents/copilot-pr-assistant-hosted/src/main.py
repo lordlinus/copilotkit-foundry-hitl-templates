@@ -6,7 +6,7 @@ The Foundry platform routes each session to an isolated microvm ($HOME); this
 process keeps one CopilotClient and one Copilot session per Foundry session id.
 
 Local run:   python main.py    (serves the Responses HTTP server)
-Deploy:      azd ai agent ...   (see azure.yaml / agent.yaml)
+Deploy:      azd ai agent ...   (see azure.yaml — inline agent definition)
 """
 from __future__ import annotations
 

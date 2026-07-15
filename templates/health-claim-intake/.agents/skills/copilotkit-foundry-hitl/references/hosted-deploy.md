@@ -17,7 +17,7 @@ Responses) is published as an **Azure AI Foundry hosted agent**. This runs from
 > **Note for anyone starting a brand-new template from scratch** (not
 > customizing this one): `azd ai agent sample list` / `azd ai agent init -m
 > <manifest-url>` can scaffold a fresh `hosted/`-style project (`main.py`,
-> `agent.yaml`, `azure.yaml`, `Dockerfile`, `infra/`) for whatever `azd`
+> `azure.yaml` with the inline agent definition, `Dockerfile`, `infra/`) for whatever `azd`
 > Foundry extension version you have installed. This template's `hosted/`
 > predates that tool and has since been hand-tuned for the dual root+`hosted/`
 > project layout below — don't regenerate it wholesale over an existing,
@@ -30,14 +30,16 @@ Responses) is published as an **Azure AI Foundry hosted agent**. This runs from
 cd hosted
 azd env new <env-name>            # first time
 azd env set AZURE_LOCATION <region>
-# (model deployment name comes from hosted/azure.yaml `deployments` + agent.yaml)
+# (model deployment name is declared twice in hosted/azure.yaml: `deployments`
+#  + the AZURE_AI_MODEL_DEPLOYMENT_NAME env var — verify.sh checks they agree)
 make up        # == azd up : provision + remote-build the image + publish the agent
 ```
 
 `make up` builds the image with **remote build** (so no local Docker needed) from
 the template root context (so the shared `src/agent.py` is included), provisions
 the model deployment declared in `hosted/azure.yaml`, and publishes the hosted
-agent described by `agent.yaml` / `agent.manifest.yaml`.
+agent from the definition declared INLINE on the `azure.ai.agent` service entry
+(unified shape — no standalone `agent.yaml`/`agent.manifest.yaml`).
 
 ## Gotchas (also in troubleshooting.md)
 
@@ -69,7 +71,7 @@ azd env new <env-name>-app            # a separate azd env from hosted/'s
 azd env set AZURE_LOCATION <region>
 azd env set FOUNDRY_ACCOUNT_RESOURCE_ID <the Foundry account resource ID>
 azd env set FOUNDRY_PROJECT_ENDPOINT <the project endpoint from `make up`>
-azd env set HOSTED_AGENT_NAME <the deployed agent name — same as hosted/agent.yaml `name:`>
+azd env set HOSTED_AGENT_NAME <the deployed agent name — the inline `name:` in hosted/azure.yaml>
 make up-app       # == azd up : provisions ACR + Container Apps env + both apps
 ```
 

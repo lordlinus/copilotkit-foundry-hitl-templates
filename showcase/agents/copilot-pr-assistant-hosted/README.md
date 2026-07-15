@@ -81,8 +81,8 @@ Add `"stream":true` for token-by-token Responses SSE (`response.output_text.delt
 
 ## Deploy to Foundry (`azd` — direct code deploy, no Docker/ACR) ✅ verified
 
-`agent.yaml` carries `code_configuration:` (runtime `python_3_13`, entry point
-`app.py`, `remote_build`), so `azd deploy` zips the source and lets Foundry
+The inline agent definition in `azure.yaml` carries `codeConfiguration:`
+(runtime `python_3_13`, entry point `app.py`, `remote_build`), so `azd deploy` zips the source and lets Foundry
 remote-build the runtime — **no Docker, no ACR**. The `github-copilot-sdk` wheel is
 `py3-none-<platform>`, so it resolves on the remote 3.13 runtime; the ~160 MB
 Copilot CLI binary comes from that wheel.
@@ -110,9 +110,9 @@ azd ai agent show  copilot-pr-assistant-hosted --output json   # expect "status"
 azd ai agent invoke copilot-pr-assistant-hosted "List the changed files and draft a PR title." --no-prompt
 ```
 
-The `environment_variables` in `agent.yaml` resolve from the azd env at deploy
+The `environmentVariables` in `azure.yaml` resolve from the azd env at deploy
 time and are injected into the hosted container. The Dockerfile remains a
-**container fallback** (`azd deploy` uses it only if you remove `code_configuration`).
+**container fallback** (`azd deploy` uses it only if you remove `codeConfiguration`).
 
 ## Gotchas (verified)
 

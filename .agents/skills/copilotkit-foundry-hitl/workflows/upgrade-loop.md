@@ -20,8 +20,8 @@ Never remove a patch on the strength of a version bump alone.
    `agent-framework-foundry-hosting`. Keep them **consistent** — do not mix
    major/protocol lines of the same family.
 2. **Match the protocol version.** `agent-framework-foundry-hosting`'s protocol must
-   equal the `version` in `hosted/responses/agent.yaml` **and**
-   `agent.manifest.yaml`, or the hosted runtime fast-fails: `RuntimeError: the hosted
+   equal the `protocols[].version` declared inline in BOTH `azure.yaml` and
+   `hosted/azure.yaml`, or the hosted runtime fast-fails: `RuntimeError: the hosted
    environment is running on protocol X, but the agent requires protocol Y`. Bump
    both manifests together (v2.0 is `1.0.0a260630`+; see
    `../references/architecture.md`, "Protocol v2.0").

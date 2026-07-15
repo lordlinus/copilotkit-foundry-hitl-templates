@@ -9,8 +9,8 @@ Use this when adding a new template under `templates/` (via
 - `manifest.json.templateId` MUST equal the directory name.
 - The agent runtime name (`AGENT_NAME` in `src/agent.py`) is snake_case and MUST
   match the CopilotKit `agent=` prop and the route's `AGENT_NAME` const. The
-  hosted name (`hosted/azure.yaml`, `agent.yaml`, `agent.manifest.yaml`) is the
-  kebab-case template/app name. `scripts/verify.sh` enforces both.
+  hosted name (top-level `name:` + the inline agent `name:` in `azure.yaml` and
+  `hosted/azure.yaml`) is the kebab-case template/app name. `scripts/verify.sh` enforces both.
 
 ## Required files
 
@@ -23,7 +23,7 @@ A template is a complete, runnable app:
 | `backend/bridge_app.py` | AG-UI server → `HostedProxyAgent` (DIRECT local / platform deployed) |
 | `backend/{hosted_proxy,hosted_client}.py` | the bridge: forward turns + `mcp_approval_response` to the hosted agent |
 | `backend/requirements.txt`, `backend/Dockerfile` | pinned deps; MCR base |
-| `hosted/azure.yaml`, `hosted/responses/{main.py,Dockerfile,agent.yaml,agent.manifest.yaml}` | azd → Foundry hosted agent |
+| `hosted/azure.yaml` (inline agent definition), `hosted/responses/{main.py,Dockerfile}` | azd → Foundry hosted agent |
 | `frontend/` | Next.js + CopilotKit v2 (catch-all route, `useSingleEndpoint={false}`, `useHumanInTheLoop`/`confirm_changes`) |
 | `scripts/verify.sh`, `scripts/smoke.py`, `scripts/smoke_run.sh`, `scripts/lib-agentrun.sh`, `scripts/lib.sh` | the proof |
 | `frontend/e2e/hitl.spec.ts`, `frontend/playwright.config.ts`, `scripts/e2e_run.sh` | real-browser proof of read + approve + reject + follow-up |

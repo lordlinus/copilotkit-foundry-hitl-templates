@@ -3,11 +3,13 @@
 # LOCAL-DEV azd project, used only by `azd ai agent run` (see run-local.sh /
 # scripts/lib-agentrun.sh — invoked from this directory so src/ resolves). It is
 # NOT deployed; `hosted/azure.yaml` is the deploy manifest for the same agent.
-# `config.container.resources` here should stay equal to ./agent.yaml's
-# `resources` (both describe this same local project) — see scripts/verify.sh.
+# The agent definition lives INLINE on the service entry (unified shape, azd
+# azure.ai.agents >=1.0.0-beta — no standalone agent.yaml). Keep
+# `protocols[].version` equal to hosted/azure.yaml's (the hosted runtime fails
+# fast on a mismatch) — see scripts/verify.sh.
 requiredVersions:
     extensions:
-        azure.ai.agents: '>=0.1.0-preview'
+        azure.ai.agents: '>=1.0.0-beta.5'
 name: agentic-copilot-foundry
 services:
     agentic-copilot-foundry:
@@ -18,9 +20,24 @@ services:
             path: hosted/responses/Dockerfile
             context: .
             remoteBuild: true
-        config:
-            container:
-                resources:
-                    cpu: "1"
-                    memory: 1Gi
-            startupCommand: python app.py
+        # ── inline agent definition (formerly ./agent.yaml) ──
+        kind: hosted
+        name: agentic-copilot-foundry
+        protocols:
+            - protocol: responses
+              version: 2.0.0
+        codeConfiguration:
+            runtime: python_3_13
+            entryPoint: app.py
+            dependencyResolution: remote_build
+        environmentVariables:
+            - name: AZURE_AI_MODEL_DEPLOYMENT_NAME
+              value: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}
+            - name: FOUNDRY_PROJECT_ENDPOINT
+              value: ${FOUNDRY_PROJECT_ENDPOINT}
+        # ── run settings (formerly under config:) ──
+        container:
+            resources:
+                cpu: "1"
+                memory: 1Gi
+        startupCommand: python app.py

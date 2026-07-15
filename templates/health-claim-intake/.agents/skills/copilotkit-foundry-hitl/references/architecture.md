@@ -94,9 +94,10 @@ the strength of a package bump alone; re-run this matrix and check the issues fi
 The hosted agent now runs the Foundry hosted-agent **Responses protocol v2.0**
 (`agent-framework-foundry-hosting==1.0.0a260709`, with v2.0 introduced in
 [microsoft/agent-framework#6811](https://github.com/microsoft/agent-framework/pull/6811)
-— a **breaking** change vs the prior 1.0.0 protocol). `hosted/responses/agent.yaml`
-and `agent.manifest.yaml` declare `version: 2.0.0` to match; the package and the
-manifest version **must** agree, or the hosted runtime fails fast with
+— a **breaking** change vs the prior 1.0.0 protocol). The inline agent
+definitions in `azure.yaml` + `hosted/azure.yaml` declare
+`protocols[].version: 2.0.0` to match; the package and the declared version
+**must** agree, or the hosted runtime fails fast with
 `RuntimeError: the hosted environment is running on protocol 1.0.0, but the agent
 requires protocol 2.0.0` (raised by `agent_framework_foundry_hosting._responses`
 whenever `config.is_hosted` is true and the platform hasn't sent a v2.0 call id).
@@ -182,31 +183,43 @@ What v2.0 actually changes (read from the PR diff, not assumed):
 └── Makefile(+.targets) preflight / local / verify / smoke / up / deploy / clean.
 ```
 
-### The 3 azd projects, and why azure.yaml + agent.yaml duplicate each other
+### The 3 azd projects (unified azure.yaml shape)
 
-There are **three separate azd projects** in one app, each with its own `azure.yaml`
-(and the two agent ones each pair with an `agent.yaml`) — nothing cross-reads
-between them, so keep the paired fields in sync by hand (`scripts/verify.sh`
-checks name/resources/protocol-version drift on every `make verify`):
+There are **three separate azd projects** in one app, each with its own
+`azure.yaml`. The two agent projects use the **unified shape** (azd
+`azure.ai.agents` >=1.0.0-beta): the agent definition (`kind: hosted`, `name`,
+`protocols`, `environmentVariables`) lives INLINE on the `azure.ai.agent`
+service entry — there is **no standalone `agent.yaml` or `agent.manifest.yaml`**
+(both are deprecated upstream). Nothing cross-reads between the two agent
+projects, so keep the shared fields in sync by hand (`scripts/verify.sh` checks
+name/protocol-version/model-deployment drift on every `make verify`):
 
-| Project (cwd) | azure.yaml | agent.yaml / manifest | Run by | Deploys? |
-| --- | --- | --- | --- | --- |
-| root | `./azure.yaml` — `host: azure.ai.agent`, `startupCommand: python app.py` | `./agent.yaml` | `azd ai agent run` (`make local`/`make smoke`) | No — local process only, needs to sit next to `src/` |
-| `hosted/` | `hosted/azure.yaml` — same host, `agentDefinitionPath: responses/agent.yaml`, model `deployments` | `hosted/responses/agent.yaml` + `agent.manifest.yaml` | `azd up` (`make up`) | Yes — publishes the Foundry hosted agent |
-| `deploy/` | `deploy/azure.yaml` — `host: containerapp`, bridge + frontend services | (none — plain Container Apps, no agent manifest) | `azd up` (`make up-app`) | Yes — bridge + frontend, points at the already-deployed hosted agent |
+| Project (cwd) | azure.yaml | Run by | Deploys? |
+| --- | --- | --- | --- |
+| root | `./azure.yaml` — `host: azure.ai.agent`, inline definition + `codeConfiguration`, `startupCommand: python app.py` | `azd ai agent run` (`make local`/`make smoke`) | No — local process only, needs to sit next to `src/` |
+| `hosted/` | `hosted/azure.yaml` — same host, inline definition + model `deployments`, `startupCommand: python main.py` | `azd up` (`make up`) | Yes — publishes the Foundry hosted agent |
+| `deploy/` | `deploy/azure.yaml` — `host: containerapp`, bridge + frontend services | `azd up` (`make up-app`) | Yes — bridge + frontend, points at the already-deployed hosted agent |
 
 Why root and `hosted/` both exist for the "same" agent: `azd ai agent run` runs
-the agent as a local, non-containerized process and needs its `azure.yaml`/
-`agent.yaml` at the template root (sibling to `src/`); `azd up` in `hosted/`
-builds and publishes the real container image from a different Docker build
-context. Each pair independently declares `resources` (root: local dev sizing;
-`hosted/`: real deploy sizing — these are allowed to differ) and the hosted pair
-additionally declares `protocols[].version` (root's, `hosted/responses/agent.yaml`'s,
-and `agent.manifest.yaml`'s **must** be equal — see the "Protocol v2.0" section
-below for the exact runtime failure this guards against). This root+`hosted/`
-split is intentional and hand-tuned (see hosted-deploy.md) — don't collapse it
-into one folder; the fix for the duplication is the `verify.sh` consistency
-checks, not removing the duplication.
+the agent as a local, non-containerized process and needs its `azure.yaml` at
+the template root (sibling to `src/`); `azd up` in `hosted/` builds and
+publishes the real container image from a different Docker build context. Each
+project independently declares `container.resources` (root: local dev sizing;
+`hosted/`: real deploy sizing — these are allowed to differ) and both declare
+`protocols[].version` (the two **must** be equal — see the "Protocol v2.0"
+section for the exact runtime failure this guards against). The hosted project
+also pairs `environmentVariables.AZURE_AI_MODEL_DEPLOYMENT_NAME` with its
+`deployments[].name` — hardcode the deployment name there; an azd-env `${}`
+placeholder resolves to EMPTY when the env doesn't define it and the container
+then crashes at startup (`session_not_ready` on every invoke). This
+root+`hosted/` split is intentional and hand-tuned (see hosted-deploy.md) —
+don't collapse it into one folder; the fix for the duplication is the
+`verify.sh` consistency checks, not removing the duplication.
+
+Note: `azd deploy`/`azd up` canonically REWRITES `azure.yaml` in place
+(alphabetized keys, comments stripped) when it registers agent env vars — this
+is normal; don't fight it, and don't rely on key order or comments surviving a
+deploy (verify.sh's greps are written order-proof for exactly this reason).
 
 ## Proving it (Definition of Done)
 

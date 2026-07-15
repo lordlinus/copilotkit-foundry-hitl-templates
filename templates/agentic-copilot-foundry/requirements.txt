@@ -7,8 +7,8 @@
 # mcp is imported by agent_framework_foundry_hosting._responses (McpError) and is
 # NOT pulled transitively on the remote build — must be explicit.
 # agent-framework-foundry-hosting is on the Foundry hosted-agent protocol v2.0
-# (breaking vs 1.0.0 — PR microsoft/agent-framework#6811); agent.manifest.yaml /
-# agent.yaml must declare protocol 2.0.0 to match (see hosted/responses/).
+# (breaking vs 1.0.0 — PR microsoft/agent-framework#6811); the inline agent
+# definitions in azure.yaml + hosted/azure.yaml must declare protocol 2.0.0 to match.
 agent-framework-core==1.11.0
 agent-framework-foundry==1.10.1
 agent-framework-foundry-hosting==1.0.0a260709
