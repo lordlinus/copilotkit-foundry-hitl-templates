@@ -2,7 +2,7 @@
 name: copilotkit-foundry-scaffold
 description: "Use when SCAFFOLDING a NEW agentic web app on the CopilotKit + AG-UI + Azure AI Foundry hosted-agent stack — a Next.js/CopilotKit v2 chat UI over a FastAPI/AG-UI (SSE) bridge that forwards to ONE Microsoft Agent Framework agent hosted in Foundry, with native human-in-the-loop approval on consequential tools. This is the on-ramp: instantiate the canonical template and customize it to the user's prompt, then hand off to the copilotkit-foundry-hitl skill for ALL continued development (adding tools, wiring HITL, shared state, debugging, upgrades). Triggers: copilotkit-foundry-scaffold, build an agentic app, scaffold a CopilotKit app, new-app.sh, start a Foundry hosted-agent app, one prompt to an app, agentic-copilot-foundry template."
 metadata:
-  author: lordlinus
+  author: Sunil Sattiraju
   version: "0.4.0"
 ---
 

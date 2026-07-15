@@ -2,7 +2,7 @@
 name: copilotkit-foundry-scaffold
 description: "Use when customizing, running, verifying, or deploying THIS scaffolded app — a Next.js/CopilotKit v2 UI over an AG-UI bridge (HostedProxyAgent) to an Azure AI Foundry HOSTED agent (FoundryChatClient, Responses), with HITL approval forwarded via mcp_approval_response. This is the app-specific quick guide: where to make changes, what not to touch, and how to prove it. For deep Day-2 work — adding tools, wiring HITL, shared state, debugging why approve doesn't re-execute, upgrading agent-framework — use the sibling copilotkit-foundry-hitl skill. Triggers: this app, agent.py build_hosted_agent, FoundryChatClient, HostedProxyAgent, bridge_app, make smoke, make verify, make up, customize this app, deploy this app."
 metadata:
-  author: lordlinus
+  author: Sunil Sattiraju
   version: "0.6.0"
 ---
 
