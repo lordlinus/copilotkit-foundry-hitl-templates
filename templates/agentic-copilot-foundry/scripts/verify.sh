@@ -213,9 +213,9 @@ grep -q 'host:[[:space:]]*containerapp' deploy/azure.yaml \
 grep -qE '^\s*bridge:' deploy/azure.yaml && grep -qE '^\s*frontend:' deploy/azure.yaml \
   && pass "deploy/azure.yaml defines both the bridge and frontend services" \
   || fail "deploy/azure.yaml missing the bridge or frontend service"
-grep -q 'eed3b665-ab3a-47b6-8f48-c9382fb1dad6' deploy/infra/main.bicep \
-  && pass "deploy grants the bridge identity the Foundry Agent Consumer role (least-privilege agent access)" \
-  || fail "deploy/infra/main.bicep missing the Foundry Agent Consumer role assignment — bridge can't call the hosted agent"
+grep -q '53ca6127-db72-4b80-b1b0-d745d6d5456d' deploy/infra/main.bicep \
+  && pass "deploy grants the bridge identity the Foundry User role (agent read + interact; Agent Consumer 403s on version lookup)" \
+  || fail "deploy/infra/main.bicep missing the Foundry User role assignment — bridge can't resolve/call the hosted agent"
 grep -q 'FOUNDRY_PROJECT_ENDPOINT' deploy/infra/workload.bicep && grep -q 'HOSTED_AGENT_NAME' deploy/infra/workload.bicep \
   && pass "bridge Container App is wired with FOUNDRY_PROJECT_ENDPOINT + HOSTED_AGENT_NAME" \
   || fail "deploy/infra/workload.bicep missing bridge env wiring to the hosted agent"
