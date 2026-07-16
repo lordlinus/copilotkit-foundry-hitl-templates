@@ -13,12 +13,31 @@ jobs:
   gallery:
     name: Gallery and publishable skill
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
       - uses: astral-sh/setup-uv@v3
+      # The scaffold archive is derived from templates/agentic-copilot-foundry
+      # (deterministic build: sorted tar, epoch mtime, gzip -n). On main, rebuild
+      # and auto-commit it when a template change landed without a repackage, so
+      # the subsequent `make check` never fails on a stale archive. PRs keep the
+      # strict check (CI cannot push to fork branches) — run `make package-skill`
+      # locally and commit the archive with your change.
+      - name: Repackage scaffold skill archive (main only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          make package-skill
+          if ! git diff --quiet -- .agents/skills/copilotkit-foundry-scaffold/assets; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .agents/skills/copilotkit-foundry-scaffold/assets
+            git commit -m "Rebuild scaffold skill archive (auto: make package-skill)"
+            git push
+          fi
       - run: make check
       - run: make release-check
 
