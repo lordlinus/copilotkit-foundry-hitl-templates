@@ -41,6 +41,8 @@ How a coding agent turns one sentence into a verified, running app.
    make verify     # structural checks — offline, run it first
    az login && azd auth login   # once — azd keeps its own credential
    make up         # provision the Foundry project + deploy the hosted agent
+                    # (only some regions support hosted agents — this fails
+                    # fast with the full list if yours doesn't)
    make smoke      # end-to-end HITL against the REAL agent, run locally via
                     # `azd ai agent run` (reuses the project 'make up' just
                     # provisioned — no extra manual step)
@@ -53,6 +55,7 @@ How a coding agent turns one sentence into a verified, running app.
 5. **Run / deploy.** `make local` for the dev loop. Before calling the app
    *deployed* or *live*: `make up-app` (bridge + frontend Container Apps) and
    `make verify-deployed` (a REAL active Foundry agent answers a live invoke).
+   `make down` tears everything back down when you're done with it.
 
 6. **Continue development.** For any change beyond the initial customization — a new
    tool, a new approval, shared state, a bug, an upgrade — load

@@ -29,7 +29,9 @@ az login && azd auth login
 
 # Provision + deploy the hosted Foundry agent. The first run prompts for an
 # env name, subscription, and location, and creates hosted/.azure/:
-make up
+make up   # only some Azure regions support Foundry hosted agents (e.g. East US 2,
+          # Sweden Central, Canada Central) — this fails fast with the full list
+          # if the azd env's region doesn't support them
 
 # Prove it — the REAL agent running locally (no mock), via `azd ai agent run`,
 # which reuses the project `make up` just provisioned — no extra manual step:
@@ -43,6 +45,10 @@ make local        # REAL agent (azd ai agent run) + bridge :8080 + frontend :300
 # agent `make up` deployed, then prove the deployment is real:
 make up-app
 make verify-deployed   # a REAL active Foundry agent answers a live invoke
+
+# Tear it all down (deletes every resource make up / make up-app created, and
+# purges soft-deleted resources so the same names can be reused):
+make down
 ```
 
 `make doctor` checks every prerequisite (tools, logins, azd envs, ports) with the
@@ -85,6 +91,7 @@ Open http://localhost:3000 and try: *"what are my balances?"* →
 | `make up` / `make deploy` | `azd up` / `azd deploy` the hosted agent |
 | `make up-app` / `make deploy-app` | `azd up` / `azd deploy` the bridge + frontend Container Apps (`deploy/`) |
 | `make verify-deployed` | deployment gate: the hosted agent is `active` in Foundry and a live invoke reaches it |
+| `make down` | tear down ALL provisioned Azure resources (`deploy/` then `hosted/`, purging soft-deletes) |
 | `make clean` | remove venv / node_modules / .next |
 
 ## Definition of Done

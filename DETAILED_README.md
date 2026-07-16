@@ -159,6 +159,16 @@ Run it first. Beyond that:
 - `make up` fails on quota — the default deploy requests `gpt-4.1`
   (GlobalStandard, capacity 100); lower `capacity` in `hosted/azure.yaml` or pick
   a subscription/region with quota.
+- `make up` fails fast with a region list instead of calling `azd up` — Foundry
+  hosted agents are only available in a subset of Azure regions (East US 2,
+  Sweden Central, Canada Central, …; `scripts/check-region.sh` / `make doctor`
+  print the current full list). Pick a supported region when `azd up` first
+  prompts, or `cd hosted && azd env set AZURE_LOCATION <region>`.
+- `make down` tears down everything `make up` / `make up-app` provisioned
+  (`deploy/` then `hosted/`, with `--purge` so soft-deleted resources like the
+  Foundry account don't block a later `make up` from reusing the same names).
+  Local files and azd envs (`hosted/.azure`, `deploy/.azure`) are untouched, so
+  `make up` can recreate the infra from the same env.
 
 ## Live showcase
 

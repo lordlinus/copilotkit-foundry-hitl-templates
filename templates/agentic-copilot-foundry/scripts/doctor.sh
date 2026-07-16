@@ -5,6 +5,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 . scripts/lib.sh
+. scripts/foundry-regions.sh
 
 info "toolchain"
 for t in uv node npm az azd; do
@@ -53,11 +54,22 @@ else
 fi
 
 info "HOSTED azd env (hosted/.azure — what make up / up-app deploy)"
-if (cd hosted && azd env list -o json 2>/dev/null </dev/null | grep -q '"IsDefault":[[:space:]]*true' \
-      && azd env get-values 2>/dev/null </dev/null || true) | grep -q '^AZURE_SUBSCRIPTION_ID='; then
+HOSTED_ENVVALS=""
+if (cd hosted && azd env list -o json 2>/dev/null </dev/null) | grep -q '"IsDefault":[[:space:]]*true'; then
+  HOSTED_ENVVALS="$(cd hosted && azd env get-values 2>/dev/null </dev/null || true)"
+fi
+if printf '%s\n' "$HOSTED_ENVVALS" | grep -q '^AZURE_SUBSCRIPTION_ID='; then
   pass "hosted env exists"
+  HOSTED_LOC="$(printf '%s\n' "$HOSTED_ENVVALS" | sed -n 's/^AZURE_LOCATION="\(.*\)"$/\1/p')"
+  if [ -n "$HOSTED_LOC" ]; then
+    if foundry_region_is_supported "$HOSTED_LOC"; then
+      pass "AZURE_LOCATION '$HOSTED_LOC' supports Foundry hosted agents"
+    else
+      fail "AZURE_LOCATION '$HOSTED_LOC' does NOT support Foundry hosted agents — 'make up' will fail deep in provisioning. Supported: $(foundry_region_list). Fix: cd hosted && azd env set AZURE_LOCATION <region>, then 'make up' again"
+    fi
+  fi
 else
-  warn "no hosted env yet — 'make up' creates it (required before up-app / verify-deployed)"
+  warn "no hosted env yet — 'make up' creates it (required before up-app / verify-deployed); supported regions: $(foundry_region_list)"
 fi
 
 info "ports (8088 agent, 8080 bridge, 3000 frontend)"

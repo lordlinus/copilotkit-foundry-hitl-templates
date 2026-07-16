@@ -6,7 +6,7 @@ VENV  := backend/.venv
 BPY   := $(VENV)/bin/python
 
 .DEFAULT_GOAL := help
-.PHONY: help doctor preflight install local verify smoke e2e up deploy up-app deploy-app verify-deployed clean
+.PHONY: help doctor preflight install local verify smoke e2e up down deploy up-app deploy-app verify-deployed clean
 
 help:
 	@echo "$(APP_NAME) — the path, in order ('make doctor' checks your setup at any point):"
@@ -15,7 +15,8 @@ help:
 	@echo "    1. make verify             offline structural gate — green before you touch anything"
 	@echo "    2. az login && azd auth login    azd keeps its own credential; BOTH are needed"
 	@echo "    3. make up                 provision + deploy the hosted Foundry agent"
-	@echo "                               (first run prompts: env name, subscription, location)"
+	@echo "                               (first run prompts: env name, subscription, location —"
+	@echo "                               only some regions support hosted agents; 'make up' checks)"
 	@echo ""
 	@echo "  prove it (the dev gate — rerun after every change; NOT deployment proof)"
 	@echo "    4. make smoke              end-to-end HITL vs the REAL agent run locally via"
@@ -34,6 +35,7 @@ help:
 	@echo "    make preflight   install backend venv + frontend deps"
 	@echo "    make deploy      redeploy the hosted agent after src/agent.py changes (skips provisioning)"
 	@echo "    make deploy-app  redeploy the bridge + frontend after code changes (skips provisioning)"
+	@echo "    make down        tear down ALL provisioned Azure resources (deploy/ then hosted/)"
 	@echo "    make clean       remove venvs / node_modules / .next"
 
 doctor:
@@ -53,6 +55,7 @@ verify:
 	@bash scripts/verify.sh
 
 up:
+	@bash scripts/check-region.sh
 	@cd hosted && azd up
 
 smoke: install
@@ -75,6 +78,15 @@ deploy:
 
 deploy-app:
 	@cd deploy && azd deploy
+
+down:
+	@echo "▸ tearing down deployed infra (deploy/ first — the bridge/frontend depend on the"
+	@echo "  hosted agent, not the other way round)…"
+	@if [ -d deploy/.azure ]; then (cd deploy && azd down --purge --force); \
+	 else echo "  (deploy/.azure not found — nothing to tear down there)"; fi
+	@if [ -d hosted/.azure ]; then (cd hosted && azd down --purge --force); \
+	 else echo "  (hosted/.azure not found — nothing to tear down there)"; fi
+	@echo "✓ down — all provisioned Azure resources removed (local files/azd envs untouched)"
 
 clean:
 	@rm -rf $(VENV) frontend/node_modules frontend/.next backend/__pycache__ src/__pycache__

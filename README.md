@@ -24,7 +24,10 @@ design rationale, and how everything is verified:
 
 You need: `git`, `make`, [`uv`](https://docs.astral.sh/uv/), Node.js ≥ 22,
 Azure CLI (`az`) + [Azure Developer CLI (`azd`)](https://aka.ms/azd), and an Azure
-subscription with [Azure AI Foundry](https://ai.azure.com) access. Optional:
+subscription with [Azure AI Foundry](https://ai.azure.com) access in a region that
+supports [Foundry hosted agents](https://learn.microsoft.com/azure/foundry/agents/concepts/hosted-agents#region-availability)
+(e.g. East US 2, Sweden Central, Canada Central — `make up` checks this and fails
+fast with the full list if you pick an unsupported one). Optional:
 [GitHub Copilot CLI](https://github.com/github/copilot-cli) to customize the
 scaffold from a prompt.
 
@@ -65,6 +68,14 @@ pauses for your Approve/Reject.
 ```bash
 make up-app            # deploy the bridge + frontend as Container Apps
 make verify-deployed   # a REAL active Foundry agent answers a live invoke
+```
+
+### 5. Tear it down
+
+```bash
+make down   # deletes every Azure resource make up / make up-app created
+            # (and purges soft-deleted resources, e.g. the Foundry account) —
+            # local files and azd envs are untouched, so `make up` can recreate it
 ```
 
 **Stuck?** `make doctor` checks every prerequisite (tools, logins, azd envs,
