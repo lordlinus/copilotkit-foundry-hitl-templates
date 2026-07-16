@@ -33,7 +33,7 @@ scaffold from a prompt.
 ```bash
 git clone https://github.com/lordlinus/copilotkit-foundry-hitl-templates
 cd copilotkit-foundry-hitl-templates
-scripts/new-app.sh my-app ~/projects
+./scripts/new-app.sh my-app ~/projects
 cd ~/projects/my-app
 make                                   # prints the full numbered path
 make verify                            # offline structural gate — green from the start
