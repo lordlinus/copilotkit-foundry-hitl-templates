@@ -50,21 +50,23 @@ module workload 'workload.bicep' = {
   }
 }
 
-// Grant the Container App's managed identity access to call the deployed
-// Foundry HOSTED agents' Responses endpoints (the gateway forwards every turn
-// to them; it makes no direct model-inference calls). "Foundry Agent Consumer"
-// is the least-privilege role for this — the same role each template's own
-// `deploy/` bicep grants its bridge identity (see
-// templates/agentic-copilot-foundry/deploy/infra/main.bicep).
-var foundryAgentConsumerRoleId = 'eed3b665-ab3a-47b6-8f48-c9382fb1dad6'
+// Grant the Container App's managed identity access to the deployed Foundry
+// HOSTED agents. "Foundry Agent Consumer" (interact/action only) is NOT
+// sufficient: hosted_client.py first resolves the latest agent version via
+// GET /api/projects/{project}/agents/{name}, which needs the
+// Microsoft.CognitiveServices/accounts/AIServices/agents/read data action —
+// Agent Consumer returns 403 on that call. "Foundry User" is the narrowest
+// built-in role covering both (dataActions: Microsoft.CognitiveServices/*),
+// scoped here to the single Foundry account.
+var foundryUserRoleId = '53ca6127-db72-4b80-b1b0-d745d6d5456d'
 
-module roleAgentConsumer 'role-assignment.bicep' = {
+module roleFoundryUser 'role-assignment.bicep' = {
   scope: resourceGroup(foundryRgName)
-  name: 'role-foundry-agent-consumer'
+  name: 'role-foundry-user'
   params: {
     foundryAccountName: foundryAccountName
     principalId: workload.outputs.identityPrincipalId
-    roleDefinitionId: foundryAgentConsumerRoleId
+    roleDefinitionId: foundryUserRoleId
   }
 }
 

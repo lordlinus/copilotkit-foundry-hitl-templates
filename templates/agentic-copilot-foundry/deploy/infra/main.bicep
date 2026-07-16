@@ -45,21 +45,23 @@ module workload 'workload.bicep' = {
   }
 }
 
-// Grant the bridge's managed identity the least-privilege role for interacting
-// with agent endpoints (NOT "Azure AI User"/"Cognitive Services OpenAI User" —
-// those are for direct model inference, a different data-plane permission; see
-// https://learn.microsoft.com/azure/foundry/agents/concepts/hosted-agent-permissions).
+// Grant the bridge's managed identity access to the hosted agents. "Foundry
+// Agent Consumer" (interact/action only) is NOT sufficient: hosted_client.py
+// resolves the latest agent version via GET /api/projects/{project}/agents/{name},
+// which needs the Microsoft.CognitiveServices/accounts/AIServices/agents/read
+// data action — Agent Consumer returns 403 on that call. "Foundry User" is the
+// narrowest built-in role covering both (dataActions: Microsoft.CognitiveServices/*).
 // Scoped to the whole Foundry ACCOUNT for simplicity; scope to the project or
 // the specific agent instead for tighter least-privilege in production.
-var foundryAgentConsumerRoleId = 'eed3b665-ab3a-47b6-8f48-c9382fb1dad6'
+var foundryUserRoleId = '53ca6127-db72-4b80-b1b0-d745d6d5456d'
 
-module roleAgentConsumer 'role-assignment.bicep' = {
+module roleFoundryUser 'role-assignment.bicep' = {
   scope: resourceGroup(foundryRgName)
-  name: 'role-foundry-agent-consumer'
+  name: 'role-foundry-user'
   params: {
     foundryAccountName: foundryAccountName
     principalId: workload.outputs.bridgeIdentityPrincipalId
-    roleDefinitionId: foundryAgentConsumerRoleId
+    roleDefinitionId: foundryUserRoleId
   }
 }
 
