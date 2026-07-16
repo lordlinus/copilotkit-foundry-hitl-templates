@@ -32,11 +32,8 @@ az login && azd auth login
 # env name, subscription, and location, and creates hosted/.azure/:
 make up
 
-# One-time: create the LOCAL azd env (./.azure at the app root) that
-# smoke/e2e/local run against — answer the prompts, Ctrl-C once it's serving:
-azd ai agent run
-
-# Prove it — the REAL agent running locally, no mock:
+# Prove it — the REAL agent running locally (no mock), via `azd ai agent run`,
+# which reuses the project `make up` just provisioned — no extra manual step:
 make smoke        # bridge → REAL agent via `azd ai agent run`; asserts the HITL flow
 make e2e          # built CopilotKit UI in Chromium: read/reject/approve/follow-up
 

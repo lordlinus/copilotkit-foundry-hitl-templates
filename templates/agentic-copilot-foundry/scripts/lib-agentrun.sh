@@ -40,18 +40,41 @@ start_agent_and_bridge() {
   # only demand it from the env when azure.yaml carries a ${} placeholder
   model_literal="$(grep -A1 -m1 'name: AZURE_AI_MODEL_DEPLOYMENT_NAME' "$ROOT/azure.yaml" | awk '/value:/{print $2}')"
   case "$model_literal" in '${'*) model_literal="";; esac
-  for v in FOUNDRY_PROJECT_ENDPOINT AZURE_AI_MODEL_DEPLOYMENT_NAME; do
-    [ -n "${!v:-}" ] && continue
-    [ "$v" = "AZURE_AI_MODEL_DEPLOYMENT_NAME" ] && [ -n "$model_literal" ] && continue
-    printf '%s\n' "$ENVVALS" | grep -q "^$v=" || MISSING="$MISSING $v"
-  done
+  check_missing() {
+    MISSING=""
+    for v in FOUNDRY_PROJECT_ENDPOINT AZURE_AI_MODEL_DEPLOYMENT_NAME; do
+      [ -n "${!v:-}" ] && continue
+      [ "$v" = "AZURE_AI_MODEL_DEPLOYMENT_NAME" ] && [ -n "$model_literal" ] && continue
+      printf '%s\n' "$ENVVALS" | grep -q "^$v=" || MISSING="$MISSING $v"
+    done
+  }
+  check_missing
+
+  # Auto-heal: `azd ai agent run` does NOT prompt for a subscription/project and
+  # does NOT provision anything on its own — verified against Microsoft Learn
+  # ("Foundry Hosted Agents" quickstarts: FOUNDRY_PROJECT_ENDPOINT must be set
+  # BEFORE `azd ai agent run`) and live against azd 1.27 + azure.ai.agents
+  # 1.0.0-beta.5 (it crashes with KeyError: FOUNDRY_PROJECT_ENDPOINT instead).
+  # So if the LOCAL env (./.azure) is missing it, reuse the project `make up`
+  # already provisioned in hosted/.azure rather than provisioning a second,
+  # redundant Foundry project just for local dev.
+  if printf '%s\n' "$MISSING" | grep -q FOUNDRY_PROJECT_ENDPOINT && [ -d "$ROOT/hosted/.azure" ]; then
+    local hosted_endpoint
+    hosted_endpoint="$(cd "$ROOT/hosted" && azd env get-value FOUNDRY_PROJECT_ENDPOINT 2>/dev/null </dev/null || true)"
+    if [ -n "$hosted_endpoint" ]; then
+      echo "▸ no local FOUNDRY_PROJECT_ENDPOINT — reusing the one 'make up' provisioned (hosted/.azure)"
+      (cd "$ROOT" && azd env set FOUNDRY_PROJECT_ENDPOINT "$hosted_endpoint" >/dev/null 2>&1) || true
+      ENVVALS="$( (cd "$ROOT" && azd env get-values 2>/dev/null </dev/null) || true )"
+      check_missing
+    fi
+  fi
+
   if [ -n "$MISSING" ]; then
     echo "✗ the local agent has no model/project config — missing:$MISSING"
     echo "  These live in the LOCAL azd env at the app root (./.azure), which is"
-    echo "  SEPARATE from hosted/.azure (created by 'make up'). One-time fix:"
-    echo "    azd ai agent run    # interactive: pick subscription + Foundry project;"
-    echo "                        # Ctrl-C once it's serving"
-    echo "  or set the values directly:"
+    echo "  SEPARATE from hosted/.azure (created by 'make up'). One-time fix — run"
+    echo "  'make up' first (so hosted/.azure exists), then retry; or set the"
+    echo "  values directly:"
     echo "    azd env set FOUNDRY_PROJECT_ENDPOINT https://<account>.services.ai.azure.com/api/projects/<project>"
     echo "    azd env set AZURE_AI_MODEL_DEPLOYMENT_NAME <model-deployment-name>"
     echo "  ('make doctor' checks all prerequisites with the fix for each.)"

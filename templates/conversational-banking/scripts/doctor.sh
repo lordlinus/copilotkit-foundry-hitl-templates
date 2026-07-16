@@ -33,8 +33,14 @@ ENVVALS=""
 if azd env list -o json 2>/dev/null </dev/null | grep -q '"IsDefault":[[:space:]]*true'; then
   ENVVALS="$(azd env get-values 2>/dev/null </dev/null || true)"
 fi
+# `azd ai agent run` does NOT prompt for a subscription/project and does NOT
+# provision anything on its own (verified against Microsoft Learn's Foundry
+# Hosted Agents quickstarts and live against azd 1.27 + azure.ai.agents
+# 1.0.0-beta.5 — it crashes with KeyError: FOUNDRY_PROJECT_ENDPOINT instead).
+# `make smoke`/`make local`/`make e2e` auto-heal this from hosted/.azure (see
+# scripts/lib-agentrun.sh); this check just tells you the fix if that fails too.
 printf '%s\n' "$ENVVALS" | grep -q "^FOUNDRY_PROJECT_ENDPOINT=" && pass "FOUNDRY_PROJECT_ENDPOINT set" \
-  || fail "FOUNDRY_PROJECT_ENDPOINT missing — run 'azd ai agent run' once interactively (Ctrl-C when serving), or: azd env set FOUNDRY_PROJECT_ENDPOINT <project endpoint>"
+  || fail "FOUNDRY_PROJECT_ENDPOINT missing — run 'make up' first (make smoke/local/e2e then reuse its project automatically), or: azd env set FOUNDRY_PROJECT_ENDPOINT <project endpoint>"
 # the model name may instead be a literal default in azure.yaml (the shipped shape)
 model_literal="$(grep -A1 -m1 'name: AZURE_AI_MODEL_DEPLOYMENT_NAME' azure.yaml | awk '/value:/{print $2}')"
 case "$model_literal" in '${'*) model_literal="";; esac

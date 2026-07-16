@@ -127,9 +127,14 @@ app scaffolded here — install it to get the same guidance in any other project
 
 ### Two azd environments
 
-`make up` creates `hosted/.azure/` (the deployed agent) while `azd ai agent run`
-creates `./.azure/` at the app root (the local dev run) — that's why the
-interactive `azd ai agent run` comes before the first `make smoke` on a fresh app.
+`make up` creates `hosted/.azure/` (the deployed agent). `make smoke` / `make
+local` / `make e2e` run the same agent locally via `azd ai agent run`, which
+needs `FOUNDRY_PROJECT_ENDPOINT` in the LOCAL azd env at the app root
+(`./.azure/`) — `azd ai agent run` does **not** prompt for or provision a
+project on its own. `scripts/lib-agentrun.sh` auto-heals this on first run by
+reusing the project `make up` already provisioned in `hosted/.azure/`, so no
+extra manual step is normally needed; `make doctor` shows the fix
+(`azd env set FOUNDRY_PROJECT_ENDPOINT <endpoint>`) if it can't.
 
 ### Definition of done
 

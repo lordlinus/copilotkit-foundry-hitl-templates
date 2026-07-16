@@ -41,9 +41,9 @@ How a coding agent turns one sentence into a verified, running app.
    make verify     # structural checks — offline, run it first
    az login && azd auth login   # once — azd keeps its own credential
    make up         # provision the Foundry project + deploy the hosted agent
-   azd ai agent run   # once, interactively at the app root — creates the LOCAL
-                      # azd env that smoke/e2e/local use; Ctrl-C once serving
-   make smoke      # end-to-end HITL against the REAL agent (azd ai agent run)
+   make smoke      # end-to-end HITL against the REAL agent, run locally via
+                    # `azd ai agent run` (reuses the project 'make up' just
+                    # provisioned — no extra manual step)
    make e2e        # real browser: read, approve, reject, follow-up after approval
    ```
    All three must be green. This is the bar for **dev-done** (it proves the

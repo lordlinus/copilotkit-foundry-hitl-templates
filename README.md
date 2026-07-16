@@ -52,9 +52,8 @@ Or skip this and run the demo agent as-is first.
 ```bash
 az login && azd auth login   # once — azd keeps its own credential, both are needed
 make up                      # provision + deploy the hosted Foundry agent
-azd ai agent run             # once, interactively — creates the local dev env;
-                             # Ctrl-C when it's serving
-make smoke                   # proves the HITL flow end-to-end against the REAL agent
+make smoke                   # proves the HITL flow end-to-end against the REAL agent,
+                             # run locally (reuses the project 'make up' just provisioned)
 make local                   # open http://localhost:3000 and chat
 ```
 
