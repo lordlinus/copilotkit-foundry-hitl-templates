@@ -63,7 +63,13 @@ start_agent_and_bridge() {
     hosted_endpoint="$(cd "$ROOT/hosted" && azd env get-value FOUNDRY_PROJECT_ENDPOINT 2>/dev/null </dev/null || true)"
     if [ -n "$hosted_endpoint" ]; then
       echo "▸ no local FOUNDRY_PROJECT_ENDPOINT — reusing the one 'make up' provisioned (hosted/.azure)"
-      (cd "$ROOT" && azd env set FOUNDRY_PROJECT_ENDPOINT "$hosted_endpoint" >/dev/null 2>&1) || true
+      # --no-prompt + </dev/null: when the LOCAL ./.azure has no environment yet,
+      # `azd env set` implicitly creates one and — on a real TTY — can prompt for
+      # subscription/location. Stdout/stderr are silenced above, so that prompt is
+      # invisible and the run just hangs until the user Ctrl-C's it. --no-prompt
+      # makes azd resolve automatically (deriving the env name from cwd) or fail
+      # fast instead of blocking on unseen input; </dev/null is defense in depth.
+      (cd "$ROOT" && azd env set FOUNDRY_PROJECT_ENDPOINT "$hosted_endpoint" --no-prompt >/dev/null 2>&1 </dev/null) || true
       ENVVALS="$( (cd "$ROOT" && azd env get-values 2>/dev/null </dev/null) || true )"
       check_missing
     fi
